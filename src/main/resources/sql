@@ -1,0 +1,54 @@
+CREATE DATABASE centre_formations CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE centre_formations;
+
+CREATE TABLE utilisateur (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    nom           VARCHAR(100) NOT NULL,
+    prenom        VARCHAR(100) NOT NULL,
+    email         VARCHAR(150) NOT NULL UNIQUE,
+    mot_de_passe  VARCHAR(255) NOT NULL,  -- bcrypt hash
+    role          ENUM('etudiant', 'formateur', 'admin') NOT NULL DEFAULT 'etudiant',
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE pole (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    nom           VARCHAR(100) NOT NULL,
+    description   TEXT
+);
+
+CREATE TABLE formation (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    pole_id       INT NOT NULL,
+    titre         VARCHAR(200) NOT NULL,
+    description   TEXT,
+    duree_heures  INT NOT NULL,
+    prix          DECIMAL(8,2) NOT NULL,
+    FOREIGN KEY (pole_id) REFERENCES pole(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE session (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    formation_id  INT NOT NULL,
+    formateur_id  INT NOT NULL,
+    date_debut    DATE NOT NULL,
+    date_fin      DATE NOT NULL,
+    modalite      ENUM('presentiel', 'en_ligne') NOT NULL,
+    capacite_max  INT NOT NULL,
+    FOREIGN KEY (formation_id) REFERENCES formation(id) ON DELETE CASCADE,
+    FOREIGN KEY (formateur_id) REFERENCES utilisateur(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE inscription (
+    id                        INT AUTO_INCREMENT PRIMARY KEY,
+    etudiant_id               INT NOT NULL,
+    session_id                INT NOT NULL,
+    date_inscription          DATETIME DEFAULT CURRENT_TIMESTAMP,
+    statut                    ENUM('inscrit', 'en_cours', 'termine', 'abandonne') NOT NULL DEFAULT 'inscrit',
+    communication_structuree  VARCHAR(50),   -- généré à l'inscription
+    statut_paiement           ENUM('en_attente', 'confirme', 'refuse') NOT NULL DEFAULT 'en_attente',
+    date_paiement             DATETIME,
+    UNIQUE KEY uq_etudiant_session (etudiant_id, session_id),
+    FOREIGN KEY (etudiant_id) REFERENCES utilisateur(id) ON DELETE RESTRICT,
+    FOREIGN KEY (session_id)  REFERENCES session(id) ON DELETE RESTRICT
+);
