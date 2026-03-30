@@ -1,4 +1,4 @@
-package be.eafc.marwan.DAO;
+package be.eafc.marwan.dao;
 
 import be.eafc.marwan.model.Utilisateur;
 import java.util.List;

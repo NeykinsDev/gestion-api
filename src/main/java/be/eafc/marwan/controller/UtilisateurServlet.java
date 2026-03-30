@@ -1,7 +1,5 @@
 package be.eafc.marwan.controller;
 
-import be.eafc.marwan.DAO.AbstractDAOFactory;
-import be.eafc.marwan.DAO.UtilisateurDAO;
 import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -18,8 +16,7 @@ public class UtilisateurServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
-        List<Utilisateur> liste = dao.findAll();
+        List<Utilisateur> liste = Utilisateur.findAll();
 
         res.setContentType("application/json");
         res.setCharacterEncoding("UTF-8");
@@ -29,7 +26,7 @@ public class UtilisateurServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         Utilisateur u = mapper.readValue(req.getInputStream(), Utilisateur.class);
-        AbstractDAOFactory.getFactory().createUtilisateurDAO().insert(u);
+        u.insert();
 
         res.setContentType("application/json");
         res.setCharacterEncoding("UTF-8");

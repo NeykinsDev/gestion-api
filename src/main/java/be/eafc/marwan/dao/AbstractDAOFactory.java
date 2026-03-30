@@ -1,4 +1,4 @@
-package be.eafc.marwan.DAO;
+package be.eafc.marwan.dao;
 
 public abstract class AbstractDAOFactory {
 

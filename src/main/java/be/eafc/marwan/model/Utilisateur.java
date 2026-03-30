@@ -1,6 +1,10 @@
 package be.eafc.marwan.model;
 
+import be.eafc.marwan.dao.AbstractDAOFactory;
+import be.eafc.marwan.dao.UtilisateurDAO;
+
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class Utilisateur {
 
@@ -22,6 +26,16 @@ public class Utilisateur {
         this.motDePasse = motDePasse;
         this.role = role;
         this.dateCreation = dateCreation;
+    }
+
+    public static List<Utilisateur> findAll() {
+        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+        return dao.findAll();
+    }
+
+    public void insert() {
+        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+        dao.insert(this);
     }
 
     public int getId() { return id; }

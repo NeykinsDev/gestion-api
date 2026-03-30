@@ -1,7 +1,7 @@
 package be.eafc.marwan;
 
-import be.eafc.marwan.DAO.AbstractDAOFactory;
-import be.eafc.marwan.DAO.MySqlDAOFactory;
+import be.eafc.marwan.dao.AbstractDAOFactory;
+import be.eafc.marwan.dao.mysql.MySqlDAOFactory;
 import jakarta.servlet.annotation.WebListener;
 import jakarta.servlet.ServletContextListener;
 

@@ -1,4 +1,7 @@
-package be.eafc.marwan.DAO;
+package be.eafc.marwan.dao.mysql;
+
+import be.eafc.marwan.dao.AbstractDAOFactory;
+import be.eafc.marwan.dao.UtilisateurDAO;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

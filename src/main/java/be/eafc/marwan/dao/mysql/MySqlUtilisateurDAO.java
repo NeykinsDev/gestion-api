@@ -1,5 +1,6 @@
-package be.eafc.marwan.DAO;
+package be.eafc.marwan.dao.mysql;
 
+import be.eafc.marwan.dao.UtilisateurDAO;
 import be.eafc.marwan.model.Utilisateur;
 import java.sql.*;
 import java.util.ArrayList;
