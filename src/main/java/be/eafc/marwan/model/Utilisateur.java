@@ -2,9 +2,12 @@ package be.eafc.marwan.model;
 
 import be.eafc.marwan.dao.AbstractDAOFactory;
 import be.eafc.marwan.dao.UtilisateurDAO;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 
 public class Utilisateur {
 
@@ -34,6 +37,9 @@ public class Utilisateur {
     }
 
     public void insert() {
+        String mdpHache = BCrypt.hashpw(this.motDePasse, BCrypt.gensalt());
+        this.setMotDePasse(mdpHache);
+
         UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
         dao.insert(this);
     }
@@ -52,4 +58,15 @@ public class Utilisateur {
     public void setRole(String role) { this.role = role; }
     public LocalDateTime getDateCreation() { return dateCreation; }
     public void setDateCreation(LocalDateTime dateCreation) { this.dateCreation = dateCreation; }
+
+
+    public static Utilisateur authentifier(String email, String mdpSaisi){
+        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+        Utilisateur u = dao.findByEmail(email);
+
+        if(u!=null && BCrypt.checkpw(mdpSaisi, u.getMotDePasse())){
+            return u;
+        }
+        return null;
+    }
 }

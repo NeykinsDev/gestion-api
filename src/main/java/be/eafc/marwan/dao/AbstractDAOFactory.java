@@ -13,4 +13,6 @@ public abstract class AbstractDAOFactory {
     }
 
     public abstract UtilisateurDAO createUtilisateurDAO();
+
+    public abstract FormationDAO createFormationDAO();
 }

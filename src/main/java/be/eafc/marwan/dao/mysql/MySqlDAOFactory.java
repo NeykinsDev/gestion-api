@@ -1,6 +1,7 @@
 package be.eafc.marwan.dao.mysql;
 
 import be.eafc.marwan.dao.AbstractDAOFactory;
+import be.eafc.marwan.dao.FormationDAO;
 import be.eafc.marwan.dao.UtilisateurDAO;
 
 import java.sql.Connection;
@@ -13,8 +14,8 @@ public class MySqlDAOFactory extends AbstractDAOFactory {
     private Connection connection;
 
     private static final String URL = "jdbc:mysql://localhost:3306/centre_formations";
-    private static final String USER = "root";
-    private static final String PASSWORD = "root";
+    private static final String USER = "marwan";
+    private static final String PASSWORD = "marwan_student";
 
     private MySqlDAOFactory(){
         try{
@@ -39,5 +40,10 @@ public class MySqlDAOFactory extends AbstractDAOFactory {
     @Override
     public UtilisateurDAO createUtilisateurDAO() {
         return MySqlUtilisateurDAO.getInstance(this);
+    }
+
+    @Override
+    public FormationDAO createFormationDAO() {
+        return new MySqlFormationDAO(this);
     }
 }
