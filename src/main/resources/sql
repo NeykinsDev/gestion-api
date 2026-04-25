@@ -1,21 +1,13 @@
--- =============================================================
--- Nom de la base de données : centre_formations
--- Projet : Gestion d'un centre de formations (SGBD 2025)
--- =============================================================
-
 DROP DATABASE IF EXISTS centre_formations;
 CREATE DATABASE centre_formations CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE centre_formations;
 
--- 1. Table des pôles de formation (catégories) [cite: 108]
 CREATE TABLE pole (
                       id          INT AUTO_INCREMENT PRIMARY KEY,
                       nom         VARCHAR(100) NOT NULL UNIQUE,
                       description TEXT
 );
 
--- 2. Table des utilisateurs (Administrateurs, Formateurs, Étudiants) [cite: 93, 114, 115]
--- Note : Le mot de passe doit être haché en Java avant l'insertion[cite: 25].
 CREATE TABLE utilisateur (
                              id            INT AUTO_INCREMENT PRIMARY KEY,
                              nom           VARCHAR(100) NOT NULL,
@@ -26,7 +18,6 @@ CREATE TABLE utilisateur (
                              created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Table des formations (Le catalogue général) [cite: 10, 105]
 CREATE TABLE formation (
                            id            INT AUTO_INCREMENT PRIMARY KEY,
                            pole_id       INT NOT NULL,
@@ -37,7 +28,6 @@ CREATE TABLE formation (
                            CONSTRAINT fk_formation_pole FOREIGN KEY (pole_id) REFERENCES pole(id) ON DELETE RESTRICT
 );
 
--- 4. Table des sessions (Instances spécifiques d'une formation)
 CREATE TABLE session (
                          id            INT AUTO_INCREMENT PRIMARY KEY,
                          formation_id  INT NOT NULL,
@@ -51,7 +41,6 @@ CREATE TABLE session (
                          CONSTRAINT fk_session_formateur FOREIGN KEY (formateur_id) REFERENCES utilisateur(id) ON DELETE RESTRICT
 );
 
--- 5. Table des inscriptions (Lien entre étudiants et sessions) [cite: 13, 118]
 CREATE TABLE inscription (
                              id                        INT AUTO_INCREMENT PRIMARY KEY,
                              etudiant_id               INT NOT NULL,
