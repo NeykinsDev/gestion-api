@@ -28,29 +28,24 @@ public class AuthServlet extends HttpServlet {
 
         try {
             JsonNode node = mapper.readTree(req.getInputStream());
-
-            if (node.get("email") == null || node.get("motDePasse") == null) {
-                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                res.getWriter().write("{\"success\": false, \"message\": \"Champs manquants\"}");
-                return;
-            }
-
             String email = node.get("email").asText();
-            String mdp = node.get("motDePasse").asText();
+            String mdpSaisi = node.get("motDePasse").asText();
 
-            Utilisateur u = Utilisateur.authentifier(email, mdp);
+            Utilisateur u = AbstractDAOFactory.getFactory().createUtilisateurDAO().findByEmail(email);
 
-            if (u != null) {
-                HttpSession sess = req.getSession();
-                sess.setAttribute("user", u);
+            if (u != null && u.verifMdp(mdpSaisi)) {
+                HttpSession session = req.getSession();
+                session.setAttribute("user", u);
+
                 res.getWriter().write("{\"success\": true, \"role\": \"" + u.getRole() + "\"}");
             } else {
                 res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 res.getWriter().write("{\"success\": false, \"message\": \"Email ou mot de passe incorrect\"}");
             }
+
         } catch (Exception e) {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            res.getWriter().write("{\"success\": false, \"message\": \"Format JSON invalide\"}");
+            res.getWriter().write("{\"success\": false, \"message\": \"Erreur lors de la connexion\"}");
         }
     }
 

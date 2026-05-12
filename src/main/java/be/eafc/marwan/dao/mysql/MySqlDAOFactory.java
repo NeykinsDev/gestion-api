@@ -14,8 +14,8 @@ public class MySqlDAOFactory extends AbstractDAOFactory {
     private Connection connection;
 
     private static final String URL = "jdbc:mysql://localhost:3306/centre_formations";
-    private static final String USER = "marwan";
-    private static final String PASSWORD = "marwan_student";
+    private static final String USER = "root";
+    private static final String PASSWORD = "";
 
     private MySqlDAOFactory(){
         try{

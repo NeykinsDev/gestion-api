@@ -70,7 +70,11 @@ public class MySqlUtilisateurDAO implements UtilisateurDAO {
     }
 
     @Override
-    public void insert(Utilisateur u) {
+    public boolean insert(Utilisateur u) {
+        if(this.findByEmail(u.getEmail()) != null) {
+            return false;
+        }
+
         try {
             PreparedStatement ps = connection.prepareStatement(
                     "INSERT INTO utilisateur (nom, prenom, email, mot_de_passe, role) VALUES (?, ?, ?, ?, ?)"
@@ -80,7 +84,12 @@ public class MySqlUtilisateurDAO implements UtilisateurDAO {
             ps.setString(3, u.getEmail());
             ps.setString(4, u.getMotDePasse());
             ps.setString(5, u.getRole());
-            ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+            int rows = ps.executeUpdate();
+            return rows > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+        //return false;
     }
 }

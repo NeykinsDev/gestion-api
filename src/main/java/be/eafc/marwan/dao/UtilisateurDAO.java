@@ -7,5 +7,5 @@ public interface UtilisateurDAO {
     List<Utilisateur> findAll();
     Utilisateur findById(int id);
     Utilisateur findByEmail(String email);
-    void insert(Utilisateur u);
+    boolean insert(Utilisateur u);
 }

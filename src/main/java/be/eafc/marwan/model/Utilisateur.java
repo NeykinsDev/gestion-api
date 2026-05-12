@@ -31,18 +31,19 @@ public class Utilisateur {
         this.dateCreation = dateCreation;
     }
 
-    public static List<Utilisateur> findAll() {
-        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
-        return dao.findAll();
-    }
-
-    public void insert() {
-        String mdpHache = BCrypt.hashpw(this.motDePasse, BCrypt.gensalt());
-        this.setMotDePasse(mdpHache);
-
-        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
-        dao.insert(this);
-    }
+    // !!
+//    public List<Utilisateur> findAll() {
+//        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+//        return dao.findAll();
+//    }
+//
+//    public void insert() {
+//        String mdpHache = BCrypt.hashpw(this.motDePasse, BCrypt.gensalt());
+//        this.setMotDePasse(mdpHache);
+//
+//        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+//        dao.insert(this);
+//    }
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -59,14 +60,28 @@ public class Utilisateur {
     public LocalDateTime getDateCreation() { return dateCreation; }
     public void setDateCreation(LocalDateTime dateCreation) { this.dateCreation = dateCreation; }
 
-
-    public static Utilisateur authentifier(String email, String mdpSaisi){
-        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
-        Utilisateur u = dao.findByEmail(email);
-
-        if(u!=null && BCrypt.checkpw(mdpSaisi, u.getMotDePasse())){
-            return u;
+    public boolean enregistrer(){
+        if(this.email == null || !this.email.contains("@")){
+            return false;
         }
-        return null;
+
+        this.motDePasse = BCrypt.hashpw(this.motDePasse, BCrypt.gensalt());
+
+        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+        return dao.insert(this);
     }
+
+    public boolean verifMdp(String mdp){
+        return BCrypt.checkpw(mdp, this.motDePasse);
+    }
+
+//    public static Utilisateur authentifier(String email, String mdpSaisi){
+//        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+//        Utilisateur u = dao.findByEmail(email);
+//
+//        if(u!=null && BCrypt.checkpw(mdpSaisi, u.getMotDePasse())){
+//            return u;
+//        }
+//        return null;
+//    }
 }
