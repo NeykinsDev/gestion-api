@@ -60,6 +60,23 @@ public class Utilisateur {
     public LocalDateTime getDateCreation() { return dateCreation; }
     public void setDateCreation(LocalDateTime dateCreation) { this.dateCreation = dateCreation; }
 
+    public boolean connecter(String emailSaisi, String mdpSaisi){
+        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+        Utilisateur dbUser = dao.findByEmail(emailSaisi);
+
+        if(dbUser != null && BCrypt.checkpw(mdpSaisi, dbUser.getMotDePasse())){
+            this.id = dbUser.getId();
+            this.email = dbUser.getEmail();
+            this.prenom = dbUser.getPrenom();
+            this.nom = dbUser.getNom();
+            this.role = dbUser.getRole();
+            this.dateCreation = dbUser.getDateCreation();
+            return true;
+        }
+
+        return false;
+    }
+
     public boolean enregistrer(){
         if(this.email == null || !this.email.contains("@")){
             return false;
@@ -71,9 +88,9 @@ public class Utilisateur {
         return dao.insert(this);
     }
 
-    public boolean verifMdp(String mdp){
-        return BCrypt.checkpw(mdp, this.motDePasse);
-    }
+    //public boolean verifMdp(String mdp){
+//        return BCrypt.checkpw(mdp, this.motDePasse);
+//    }
 
 //    public static Utilisateur authentifier(String email, String mdpSaisi){
 //        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();

@@ -15,6 +15,7 @@ import jdk.jshell.execution.Util;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.io.IOException;
+import java.util.Map;
 
 @WebServlet("/login")
 public class AuthServlet extends HttpServlet {
@@ -31,14 +32,19 @@ public class AuthServlet extends HttpServlet {
             String email = node.get("email").asText();
             String mdpSaisi = node.get("motDePasse").asText();
 
-            Utilisateur u = AbstractDAOFactory.getFactory().createUtilisateurDAO().findByEmail(email);
+            Utilisateur u = new Utilisateur();
 
-            if (u != null && u.verifMdp(mdpSaisi)) {
+            if(u.connecter(email, mdpSaisi)){
                 HttpSession session = req.getSession();
                 session.setAttribute("user", u);
 
                 res.getWriter().write("{\"success\": true, \"role\": \"" + u.getRole() + "\"}");
             } else {
+                HttpSession session = req.getSession();
+                if(session != null){
+                    session.invalidate();
+                }
+
                 res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 res.getWriter().write("{\"success\": false, \"message\": \"Email ou mot de passe incorrect\"}");
             }
