@@ -5,10 +5,9 @@ import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-
 import java.io.IOException;
 
-@WebServlet("/poles")
+@WebServlet("/poles/*")
 public class PoleServlet extends HttpServlet {
 
     private final ObjectMapper mapper = new ObjectMapper();
@@ -19,95 +18,57 @@ public class PoleServlet extends HttpServlet {
         res.getWriter().write(json);
     }
 
-    private Utilisateur getUser(HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null) return null;
-
-        Object obj = session.getAttribute("user");
-        if (obj instanceof Utilisateur) return (Utilisateur) obj;
-
-        return null;
-    }
-
     private boolean isAdmin(HttpServletRequest req) {
-        Utilisateur u = getUser(req);
-        return u != null && "ADMIN".equals(u.getRole());
-    }
-
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        String idParam = req.getParameter("id");
-
-        if (idParam != null && !idParam.isBlank()) {
-            Pole p = Pole.findById(Integer.parseInt(idParam));
-
-            if (p == null) {
-                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                writeJson(res, "{\"success\": false, \"message\": \"Pole introuvable\"}");
-                return;
-            }
-
-            writeJson(res, mapper.writeValueAsString(p));
-            return;
-        }
-
-        writeJson(res, mapper.writeValueAsString(Pole.findAll()));
+        HttpSession session = req.getSession(false);
+        if (session == null) return false;
+        Object obj = session.getAttribute("user");
+        return obj instanceof Utilisateur && "ADMIN".equals(((Utilisateur) obj).getRole());
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        String pathInfo = req.getPathInfo();
+
+        // 1. RECHERCHE (Tout lister ou un seul par ID)
+        if (pathInfo != null && pathInfo.equals("/rechercher")) {
+            Pole filtre = mapper.readValue(req.getInputStream(), Pole.class);
+            if (filtre.getId() != null && filtre.getId() > 0) {
+                writeJson(res, mapper.writeValueAsString(filtre.trouverParId()));
+            } else {
+                writeJson(res, mapper.writeValueAsString(filtre.rechercher()));
+            }
+            return;
+        }
+
+        // SÉCURITÉ ADMIN POUR LE RESTE
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
             writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
             return;
         }
 
-        Pole p = mapper.readValue(req.getInputStream(), Pole.class);
-        boolean ok = p.enregistrer();
-
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Pole cree\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Creation impossible\"}");
-        }
-    }
-
-    @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+        // 2. CRÉATION
+        if (pathInfo == null || pathInfo.equals("/")) {
+            Pole p = mapper.readValue(req.getInputStream(), Pole.class);
+            if (p.enregistrer()) writeJson(res, "{\"success\": true, \"message\": \"Pole cree\"}");
+            else { res.setStatus(HttpServletResponse.SC_BAD_REQUEST); writeJson(res, "{\"success\": false}"); }
             return;
         }
 
-        Pole p = mapper.readValue(req.getInputStream(), Pole.class);
-        boolean ok = p.modifier();
-
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Pole modifie\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Modification impossible\"}");
-        }
-    }
-
-    @Override
-    protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+        // 3. MODIFICATION
+        if (pathInfo.equals("/modifier")) {
+            Pole p = mapper.readValue(req.getInputStream(), Pole.class);
+            if (p.modifier()) writeJson(res, "{\"success\": true, \"message\": \"Pole modifie\"}");
+            else { res.setStatus(HttpServletResponse.SC_BAD_REQUEST); writeJson(res, "{\"success\": false}"); }
             return;
         }
 
-        int id = Integer.parseInt(req.getParameter("id"));
-        boolean ok = Pole.supprimer(id);
-
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Pole supprime\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Suppression impossible\"}");
+        // 4. SUPPRESSION (Reçoit {"id": X} en JSON dans le body)
+        if (pathInfo.equals("/supprimer")) {
+            Pole p = mapper.readValue(req.getInputStream(), Pole.class);
+            if (p.supprimer()) writeJson(res, "{\"success\": true, \"message\": \"Pole supprime\"}");
+            else { res.setStatus(HttpServletResponse.SC_BAD_REQUEST); writeJson(res, "{\"success\": false}"); }
+            return;
         }
     }
 }

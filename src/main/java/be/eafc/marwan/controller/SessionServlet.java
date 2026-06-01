@@ -4,13 +4,14 @@ import be.eafc.marwan.model.Session;
 import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
 import java.io.IOException;
 import java.util.List;
 
-@WebServlet("/sessions")
+@WebServlet("/sessions/*")
 public class SessionServlet extends HttpServlet {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -37,88 +38,80 @@ public class SessionServlet extends HttpServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        String idParam = req.getParameter("id");
-        String formationParam = req.getParameter("formationId");
+    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        res.setContentType("application/json");
+        res.setCharacterEncoding("UTF-8");
 
-        if (idParam != null && !idParam.isBlank()) {
-            Session s = Session.findById(Integer.parseInt(idParam));
+        String pathInfo = req.getPathInfo();
 
-            if (s == null) {
-                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                writeJson(res, "{\"success\": false, \"message\": \"Session introuvable\"}");
+        try {
+            // 1. RECHERCHE / FILTRAGE / LISTAGE (Accessible par tous)
+            if (pathInfo != null && pathInfo.equals("/rechercher")) {
+                // L'objet filtre encaisse le JSON (peut contenir un id ou un formationId)
+                Session filtre = mapper.readValue(req.getInputStream(), Session.class);
+                List<Session> list = filtre.rechercher();
+
+                writeJson(res, mapper.writeValueAsString(list));
                 return;
             }
 
-            writeJson(res, mapper.writeValueAsString(s));
-            return;
-        }
+            // --- SÉCURITÉ : TOUTES LES AUTRES ACTIONS DEMANDENT LE RÔLE ADMIN ---
+            if (!isAdmin(req)) {
+                res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+                return;
+            }
 
-        List<Session> sessions;
+            // 2. CRÉATION
+            if (pathInfo == null || pathInfo.equals("/") || pathInfo.equals("/creer")) {
+                Session s = mapper.readValue(req.getInputStream(), Session.class);
+                boolean ok = s.enregistrer();
 
-        if (formationParam != null && !formationParam.isBlank()) {
-            sessions = Session.findByFormation(Integer.parseInt(formationParam));
-        } else {
-            sessions = Session.findAll();
-        }
+                if (ok) {
+                    writeJson(res, "{\"success\": true, \"message\": \"Session creee\"}");
+                } else {
+                    res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    writeJson(res, "{\"success\": false, \"message\": \"Creation impossible\"}");
+                }
+                return;
+            }
 
-        writeJson(res, mapper.writeValueAsString(sessions));
-    }
+            // 3. MODIFICATION
+            if (pathInfo.equals("/modifier")) {
+                Session s = mapper.readValue(req.getInputStream(), Session.class);
+                boolean ok = s.modifier();
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
-            return;
-        }
+                if (ok) {
+                    writeJson(res, "{\"success\": true, \"message\": \"Session modifiee\"}");
+                } else {
+                    res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    writeJson(res, "{\"success\": false, \"message\": \"Modification impossible\"}");
+                }
+                return;
+            }
 
-        Session s = mapper.readValue(req.getInputStream(), Session.class);
-        boolean ok = s.enregistrer();
+            // 4. SUPPRESSION
+            if (pathInfo.equals("/supprimer")) {
+                // OOP : On mappe le JSON {"id": X} directement dans l'instance
+                Session s = mapper.readValue(req.getInputStream(), Session.class);
+                boolean ok = s.supprimer();
 
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Session creee\"}");
-        } else {
+                if (ok) {
+                    writeJson(res, "{\"success\": true, \"message\": \"Session supprimee\"}");
+                } else {
+                    res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    writeJson(res, "{\"success\": false, \"message\": \"Suppression impossible\"}");
+                }
+                return;
+            }
+
+            // Route inconnue
+            res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            writeJson(res, "{\"success\": false, \"message\": \"URL introuvable\"}");
+
+        } catch (Exception e) {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Creation impossible\"}");
-        }
-    }
-
-    @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
-            return;
-        }
-
-        Session s = mapper.readValue(req.getInputStream(), Session.class);
-        boolean ok = s.modifier();
-
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Session modifiee\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Modification impossible\"}");
-        }
-    }
-
-    @Override
-    protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
-            return;
-        }
-
-        int id = Integer.parseInt(req.getParameter("id"));
-        boolean ok = Session.supprimer(id);
-
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Session supprimee\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Suppression impossible\"}");
+            writeJson(res, "{\"success\": false, \"message\": \"Format JSON malforme ou erreur interne\"}");
         }
     }
 }

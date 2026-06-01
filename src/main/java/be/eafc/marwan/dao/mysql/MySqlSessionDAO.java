@@ -251,4 +251,9 @@ public class MySqlSessionDAO implements SessionDAO {
             return false;
         }
     }
+
+    @Override
+    public List<Session> findByCritere(Session session) {
+        return List.of();
+    }
 }

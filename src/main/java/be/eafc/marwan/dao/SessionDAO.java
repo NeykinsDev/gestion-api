@@ -13,4 +13,5 @@ public interface SessionDAO {
     boolean insert(Session s);
     boolean update(Session s);
     boolean delete(int id);
+    List<Session> findByCritere(Session session);
 }

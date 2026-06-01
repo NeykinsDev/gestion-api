@@ -1,13 +1,14 @@
 package be.eafc.marwan.model;
 
 import be.eafc.marwan.dao.AbstractDAOFactory;
+import be.eafc.marwan.dao.SessionDAO;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public class Session {
 
-    private int id;
+    private Integer id;
     private Formation formation;
     private Utilisateur formateur;
     private LocalDate dateDebut;
@@ -76,6 +77,17 @@ public class Session {
         return AbstractDAOFactory.getFactory()
                 .createSessionDAO()
                 .findByFormation(formationId);
+    }
+
+    public List<Session> rechercher() {
+        SessionDAO dao = AbstractDAOFactory.getFactory().createSessionDAO();
+        return dao.findByCritere(this);
+    }
+
+    public boolean supprimer() {
+        if (this.id == null || this.id == 0) return false;
+        SessionDAO dao = AbstractDAOFactory.getFactory().createSessionDAO();
+        return dao.delete(this.id);
     }
 
     public static List<Session> findPlanningFormateur(int formateurId) {

@@ -1,133 +1,58 @@
 package be.eafc.marwan.controller;
 
 import be.eafc.marwan.model.Formation;
-import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.util.List;
 
-@WebServlet("/formations")
+@WebServlet("/formations/*")
 public class FormationServlet extends HttpServlet {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
-    private void writeJson(HttpServletResponse res, String json) throws IOException {
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         res.setContentType("application/json");
         res.setCharacterEncoding("UTF-8");
-        res.getWriter().write(json);
-    }
 
-    private Utilisateur getUser(HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null) return null;
+        String pathInfo = req.getPathInfo();
 
-        Object obj = session.getAttribute("user");
-        if (obj instanceof Utilisateur) return (Utilisateur) obj;
+        try {
+            if (pathInfo != null && pathInfo.equals("/rechercher")) {
+                Formation filtre = mapper.readValue(req.getInputStream(), Formation.class);
 
-        return null;
-    }
-
-    private boolean isAdmin(HttpServletRequest req) {
-        Utilisateur u = getUser(req);
-        return u != null && "ADMIN".equals(u.getRole());
-    }
-
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        String idParam = req.getParameter("id");
-        String prixParam = req.getParameter("maxPrix");
-        String dureeParam = req.getParameter("maxDuree");
-        String poleParam = req.getParameter("poleId");
-        String modalite = req.getParameter("modalite");
-
-        if (idParam != null && !idParam.isBlank()) {
-            Formation f = Formation.findById(Integer.parseInt(idParam));
-
-            if (f == null) {
-                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                writeJson(res, "{\"success\": false, \"message\": \"Formation introuvable\"}");
+                List<Formation> list = filtre.rechercher();
+                res.getWriter().write(mapper.writeValueAsString(list));
                 return;
             }
 
-            writeJson(res, mapper.writeValueAsString(f));
-            return;
-        }
+            if (pathInfo == null || pathInfo.equals("/")) {
+                Formation f = mapper.readValue(req.getInputStream(), Formation.class);
 
-        Double maxPrix = prixParam != null && !prixParam.isBlank()
-                ? Double.parseDouble(prixParam)
-                : null;
+                boolean cree = f.enregistrer();
 
-        Integer maxDuree = dureeParam != null && !dureeParam.isBlank()
-                ? Integer.parseInt(dureeParam)
-                : null;
+                if (cree) {
+                    res.getWriter().write("{\"success\": true, \"message\": \"Formation creee avec succes\"}");
+                } else {
+                    res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    res.getWriter().write("{\"success\": false, \"message\": \"Erreur de creation (champs manquants ou invalides)\"}");
+                }
+                return;
+            }
 
-        Integer poleId = poleParam != null && !poleParam.isBlank()
-                ? Integer.parseInt(poleParam)
-                : null;
+            res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            res.getWriter().write("{\"success\": false, \"message\": \"URL introuvable\"}");
 
-        List<Formation> formations = Formation.findByCritere(maxPrix, maxDuree, poleId, modalite);
-
-        writeJson(res, mapper.writeValueAsString(formations));
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
-            return;
-        }
-
-        Formation f = mapper.readValue(req.getInputStream(), Formation.class);
-        boolean ok = f.enregistrer();
-
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation creee\"}");
-        } else {
+        } catch (Exception e) {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Creation impossible\"}");
-        }
-    }
-
-    @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
-            return;
-        }
-
-        Formation f = mapper.readValue(req.getInputStream(), Formation.class);
-        boolean ok = f.modifier();
-
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation modifiee\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Modification impossible\"}");
-        }
-    }
-
-    @Override
-    protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
-            return;
-        }
-
-        int id = Integer.parseInt(req.getParameter("id"));
-        boolean ok = Formation.supprimer(id);
-
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation supprimee\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Suppression impossible\"}");
+            res.getWriter().write("{\"success\": false, \"message\": \"Format JSON malforme\"}");
         }
     }
 }

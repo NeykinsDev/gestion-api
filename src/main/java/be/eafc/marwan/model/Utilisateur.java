@@ -60,6 +60,23 @@ public class Utilisateur {
     public LocalDateTime getDateCreation() { return dateCreation; }
     public void setDateCreation(LocalDateTime dateCreation) { this.dateCreation = dateCreation; }
 
+    public boolean connecter() { // ZÉRO PARAMÈTRE
+        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+
+        Utilisateur dbUser = dao.findByEmail(this.email);
+
+        if (dbUser != null && BCrypt.checkpw(this.motDePasse, dbUser.getMotDePasse())) {
+            this.id = dbUser.getId();
+            this.nom = dbUser.getNom();
+            this.prenom = dbUser.getPrenom();
+            this.role = dbUser.getRole();
+            this.dateCreation = dbUser.getDateCreation();
+            return true;
+        }
+
+        return false;
+    }
+
     public boolean enregistrer() {
         if (this.email == null || !this.email.contains("@")) {
             return false;

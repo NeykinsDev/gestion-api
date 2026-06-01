@@ -28,17 +28,25 @@ public class AuthServlet extends HttpServlet {
 
         try {
             JsonNode node = mapper.readTree(req.getInputStream());
-            String email = node.get("email").asText();
+            String emailSaisi = node.get("email").asText();
             String mdpSaisi = node.get("motDePasse").asText();
 
-            Utilisateur u = AbstractDAOFactory.getFactory().createUtilisateurDAO().findByEmail(email);
+            Utilisateur u = new Utilisateur();
 
-            if (u != null && u.verifMdp(mdpSaisi)) {
+            u.setEmail(emailSaisi);
+            u.setMotDePasse(mdpSaisi);
+
+            if (u.connecter()) {
                 HttpSession session = req.getSession();
                 session.setAttribute("user", u);
 
                 res.getWriter().write("{\"success\": true, \"role\": \"" + u.getRole() + "\"}");
             } else {
+                HttpSession session = req.getSession(false);
+                if (session != null) {
+                    session.invalidate();
+                }
+
                 res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 res.getWriter().write("{\"success\": false, \"message\": \"Email ou mot de passe incorrect\"}");
             }
