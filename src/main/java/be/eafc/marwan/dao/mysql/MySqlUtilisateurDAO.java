@@ -92,4 +92,41 @@ public class MySqlUtilisateurDAO implements UtilisateurDAO {
         }
         //return false;
     }
+
+    @Override
+    public List<Utilisateur> findByRole(String role) {
+        List<Utilisateur> list = new ArrayList<>();
+
+        try {
+            PreparedStatement ps = connection.prepareStatement("SELECT * FROM utilisateur WHERE role = ? ORDER BY nom, prenom");
+            ps.setString(1, role);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(map(rs));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    @Override
+    public boolean updateRole(int utilisateurId, String role) {
+        String sql = "UPDATE utilisateur SET role = ? WHERE id = ?";
+
+        try {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, role);
+            ps.setInt(2, utilisateurId);
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

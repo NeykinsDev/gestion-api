@@ -60,26 +60,17 @@ public class Utilisateur {
     public LocalDateTime getDateCreation() { return dateCreation; }
     public void setDateCreation(LocalDateTime dateCreation) { this.dateCreation = dateCreation; }
 
-    public boolean connecter(String emailSaisi, String mdpSaisi){
-        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
-        Utilisateur dbUser = dao.findByEmail(emailSaisi);
-
-        if(dbUser != null && BCrypt.checkpw(mdpSaisi, dbUser.getMotDePasse())){
-            this.id = dbUser.getId();
-            this.email = dbUser.getEmail();
-            this.prenom = dbUser.getPrenom();
-            this.nom = dbUser.getNom();
-            this.role = dbUser.getRole();
-            this.dateCreation = dbUser.getDateCreation();
-            return true;
+    public boolean enregistrer() {
+        if (this.email == null || !this.email.contains("@")) {
+            return false;
         }
 
-        return false;
-    }
-
-    public boolean enregistrer(){
-        if(this.email == null || !this.email.contains("@")){
+        if (this.motDePasse == null || this.motDePasse.isBlank()) {
             return false;
+        }
+
+        if (this.role == null || this.role.isBlank()) {
+            this.role = "ETUDIANT";
         }
 
         this.motDePasse = BCrypt.hashpw(this.motDePasse, BCrypt.gensalt());
@@ -88,17 +79,42 @@ public class Utilisateur {
         return dao.insert(this);
     }
 
-    //public boolean verifMdp(String mdp){
-//        return BCrypt.checkpw(mdp, this.motDePasse);
-//    }
+    public boolean verifMdp(String mdp){
+        return BCrypt.checkpw(mdp, this.motDePasse);
+    }
 
-//    public static Utilisateur authentifier(String email, String mdpSaisi){
-//        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
-//        Utilisateur u = dao.findByEmail(email);
-//
-//        if(u!=null && BCrypt.checkpw(mdpSaisi, u.getMotDePasse())){
-//            return u;
-//        }
-//        return null;
-//    }
+    public static Utilisateur authentifier(String email, String mdpSaisi) {
+        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
+        Utilisateur u = dao.findByEmail(email);
+
+        if (u != null && u.verifMdp(mdpSaisi)) {
+            return u;
+        }
+
+        return null;
+    }
+
+    public static List<Utilisateur> findAll() {
+        return AbstractDAOFactory.getFactory()
+                .createUtilisateurDAO()
+                .findAll();
+    }
+
+    public static List<Utilisateur> findByRole(String role) {
+        return AbstractDAOFactory.getFactory()
+                .createUtilisateurDAO()
+                .findByRole(role);
+    }
+
+    public static boolean modifierRole(int utilisateurId, String nouveauRole) {
+        if (!"ETUDIANT".equals(nouveauRole)
+                && !"ADMIN".equals(nouveauRole)
+                && !"FORMATEUR".equals(nouveauRole)) {
+            return false;
+        }
+
+        return AbstractDAOFactory.getFactory()
+                .createUtilisateurDAO()
+                .updateRole(utilisateurId, nouveauRole);
+    }
 }

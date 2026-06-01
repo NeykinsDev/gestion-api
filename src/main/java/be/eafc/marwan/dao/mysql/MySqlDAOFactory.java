@@ -1,8 +1,6 @@
 package be.eafc.marwan.dao.mysql;
 
-import be.eafc.marwan.dao.AbstractDAOFactory;
-import be.eafc.marwan.dao.FormationDAO;
-import be.eafc.marwan.dao.UtilisateurDAO;
+import be.eafc.marwan.dao.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -45,5 +43,20 @@ public class MySqlDAOFactory extends AbstractDAOFactory {
     @Override
     public FormationDAO createFormationDAO() {
         return new MySqlFormationDAO(this);
+    }
+
+    @Override
+    public SessionDAO createSessionDAO() {
+        return new MySqlSessionDAO(this);
+    }
+
+    @Override
+    public PoleDAO createPoleDAO() {
+        return new MySqlPoleDAO(this);
+    }
+
+    @Override
+    public InscriptionDAO createInscriptionDAO() {
+        return new MySqlInscriptionDAO(this);
     }
 }

@@ -1,6 +1,6 @@
 package be.eafc.marwan.controller;
 
-import be.eafc.marwan.model.Formation;
+import be.eafc.marwan.model.Session;
 import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -10,8 +10,8 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.List;
 
-@WebServlet("/formations")
-public class FormationServlet extends HttpServlet {
+@WebServlet("/sessions")
+public class SessionServlet extends HttpServlet {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -39,39 +39,30 @@ public class FormationServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String idParam = req.getParameter("id");
-        String prixParam = req.getParameter("maxPrix");
-        String dureeParam = req.getParameter("maxDuree");
-        String poleParam = req.getParameter("poleId");
-        String modalite = req.getParameter("modalite");
+        String formationParam = req.getParameter("formationId");
 
         if (idParam != null && !idParam.isBlank()) {
-            Formation f = Formation.findById(Integer.parseInt(idParam));
+            Session s = Session.findById(Integer.parseInt(idParam));
 
-            if (f == null) {
+            if (s == null) {
                 res.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                writeJson(res, "{\"success\": false, \"message\": \"Formation introuvable\"}");
+                writeJson(res, "{\"success\": false, \"message\": \"Session introuvable\"}");
                 return;
             }
 
-            writeJson(res, mapper.writeValueAsString(f));
+            writeJson(res, mapper.writeValueAsString(s));
             return;
         }
 
-        Double maxPrix = prixParam != null && !prixParam.isBlank()
-                ? Double.parseDouble(prixParam)
-                : null;
+        List<Session> sessions;
 
-        Integer maxDuree = dureeParam != null && !dureeParam.isBlank()
-                ? Integer.parseInt(dureeParam)
-                : null;
+        if (formationParam != null && !formationParam.isBlank()) {
+            sessions = Session.findByFormation(Integer.parseInt(formationParam));
+        } else {
+            sessions = Session.findAll();
+        }
 
-        Integer poleId = poleParam != null && !poleParam.isBlank()
-                ? Integer.parseInt(poleParam)
-                : null;
-
-        List<Formation> formations = Formation.findByCritere(maxPrix, maxDuree, poleId, modalite);
-
-        writeJson(res, mapper.writeValueAsString(formations));
+        writeJson(res, mapper.writeValueAsString(sessions));
     }
 
     @Override
@@ -82,11 +73,11 @@ public class FormationServlet extends HttpServlet {
             return;
         }
 
-        Formation f = mapper.readValue(req.getInputStream(), Formation.class);
-        boolean ok = f.enregistrer();
+        Session s = mapper.readValue(req.getInputStream(), Session.class);
+        boolean ok = s.enregistrer();
 
         if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation creee\"}");
+            writeJson(res, "{\"success\": true, \"message\": \"Session creee\"}");
         } else {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             writeJson(res, "{\"success\": false, \"message\": \"Creation impossible\"}");
@@ -101,11 +92,11 @@ public class FormationServlet extends HttpServlet {
             return;
         }
 
-        Formation f = mapper.readValue(req.getInputStream(), Formation.class);
-        boolean ok = f.modifier();
+        Session s = mapper.readValue(req.getInputStream(), Session.class);
+        boolean ok = s.modifier();
 
         if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation modifiee\"}");
+            writeJson(res, "{\"success\": true, \"message\": \"Session modifiee\"}");
         } else {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             writeJson(res, "{\"success\": false, \"message\": \"Modification impossible\"}");
@@ -121,10 +112,10 @@ public class FormationServlet extends HttpServlet {
         }
 
         int id = Integer.parseInt(req.getParameter("id"));
-        boolean ok = Formation.supprimer(id);
+        boolean ok = Session.supprimer(id);
 
         if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation supprimee\"}");
+            writeJson(res, "{\"success\": true, \"message\": \"Session supprimee\"}");
         } else {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             writeJson(res, "{\"success\": false, \"message\": \"Suppression impossible\"}");

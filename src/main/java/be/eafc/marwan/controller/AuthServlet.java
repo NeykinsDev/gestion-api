@@ -15,7 +15,6 @@ import jdk.jshell.execution.Util;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.io.IOException;
-import java.util.Map;
 
 @WebServlet("/login")
 public class AuthServlet extends HttpServlet {
@@ -32,19 +31,14 @@ public class AuthServlet extends HttpServlet {
             String email = node.get("email").asText();
             String mdpSaisi = node.get("motDePasse").asText();
 
-            Utilisateur u = new Utilisateur();
+            Utilisateur u = AbstractDAOFactory.getFactory().createUtilisateurDAO().findByEmail(email);
 
-            if(u.connecter(email, mdpSaisi)){
+            if (u != null && u.verifMdp(mdpSaisi)) {
                 HttpSession session = req.getSession();
                 session.setAttribute("user", u);
 
                 res.getWriter().write("{\"success\": true, \"role\": \"" + u.getRole() + "\"}");
             } else {
-                HttpSession session = req.getSession();
-                if(session != null){
-                    session.invalidate();
-                }
-
                 res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 res.getWriter().write("{\"success\": false, \"message\": \"Email ou mot de passe incorrect\"}");
             }
@@ -66,5 +60,16 @@ public class AuthServlet extends HttpServlet {
         } else {
             res.getWriter().write("{\"authenticated\": false}");
         }
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        HttpSession session = req.getSession(false);
+
+        if (session != null) {
+            session.invalidate();
+        }
+
+        res.getWriter().write("{\"success\": true, \"message\": \"Deconnecte\"}");
     }
 }

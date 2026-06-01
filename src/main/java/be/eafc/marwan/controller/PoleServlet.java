@@ -1,19 +1,17 @@
 package be.eafc.marwan.controller;
 
-import be.eafc.marwan.model.Formation;
+import be.eafc.marwan.model.Pole;
 import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
 import java.io.IOException;
-import java.util.List;
 
-@WebServlet("/formations")
-public class FormationServlet extends HttpServlet {
+@WebServlet("/poles")
+public class PoleServlet extends HttpServlet {
 
-    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private final ObjectMapper mapper = new ObjectMapper();
 
     private void writeJson(HttpServletResponse res, String json) throws IOException {
         res.setContentType("application/json");
@@ -39,39 +37,21 @@ public class FormationServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String idParam = req.getParameter("id");
-        String prixParam = req.getParameter("maxPrix");
-        String dureeParam = req.getParameter("maxDuree");
-        String poleParam = req.getParameter("poleId");
-        String modalite = req.getParameter("modalite");
 
         if (idParam != null && !idParam.isBlank()) {
-            Formation f = Formation.findById(Integer.parseInt(idParam));
+            Pole p = Pole.findById(Integer.parseInt(idParam));
 
-            if (f == null) {
+            if (p == null) {
                 res.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                writeJson(res, "{\"success\": false, \"message\": \"Formation introuvable\"}");
+                writeJson(res, "{\"success\": false, \"message\": \"Pole introuvable\"}");
                 return;
             }
 
-            writeJson(res, mapper.writeValueAsString(f));
+            writeJson(res, mapper.writeValueAsString(p));
             return;
         }
 
-        Double maxPrix = prixParam != null && !prixParam.isBlank()
-                ? Double.parseDouble(prixParam)
-                : null;
-
-        Integer maxDuree = dureeParam != null && !dureeParam.isBlank()
-                ? Integer.parseInt(dureeParam)
-                : null;
-
-        Integer poleId = poleParam != null && !poleParam.isBlank()
-                ? Integer.parseInt(poleParam)
-                : null;
-
-        List<Formation> formations = Formation.findByCritere(maxPrix, maxDuree, poleId, modalite);
-
-        writeJson(res, mapper.writeValueAsString(formations));
+        writeJson(res, mapper.writeValueAsString(Pole.findAll()));
     }
 
     @Override
@@ -82,11 +62,11 @@ public class FormationServlet extends HttpServlet {
             return;
         }
 
-        Formation f = mapper.readValue(req.getInputStream(), Formation.class);
-        boolean ok = f.enregistrer();
+        Pole p = mapper.readValue(req.getInputStream(), Pole.class);
+        boolean ok = p.enregistrer();
 
         if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation creee\"}");
+            writeJson(res, "{\"success\": true, \"message\": \"Pole cree\"}");
         } else {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             writeJson(res, "{\"success\": false, \"message\": \"Creation impossible\"}");
@@ -101,11 +81,11 @@ public class FormationServlet extends HttpServlet {
             return;
         }
 
-        Formation f = mapper.readValue(req.getInputStream(), Formation.class);
-        boolean ok = f.modifier();
+        Pole p = mapper.readValue(req.getInputStream(), Pole.class);
+        boolean ok = p.modifier();
 
         if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation modifiee\"}");
+            writeJson(res, "{\"success\": true, \"message\": \"Pole modifie\"}");
         } else {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             writeJson(res, "{\"success\": false, \"message\": \"Modification impossible\"}");
@@ -121,10 +101,10 @@ public class FormationServlet extends HttpServlet {
         }
 
         int id = Integer.parseInt(req.getParameter("id"));
-        boolean ok = Formation.supprimer(id);
+        boolean ok = Pole.supprimer(id);
 
         if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation supprimee\"}");
+            writeJson(res, "{\"success\": true, \"message\": \"Pole supprime\"}");
         } else {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             writeJson(res, "{\"success\": false, \"message\": \"Suppression impossible\"}");
