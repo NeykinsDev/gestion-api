@@ -1,5 +1,7 @@
 package be.eafc.marwan.dao;
 
+import be.eafc.marwan.model.Session;
+
 public abstract class AbstractDAOFactory {
 
     private static AbstractDAOFactory factory;
@@ -15,4 +17,10 @@ public abstract class AbstractDAOFactory {
     public abstract UtilisateurDAO createUtilisateurDAO();
 
     public abstract FormationDAO createFormationDAO();
+
+    public abstract SessionDAO createSessionDAO();
+
+    public abstract PoleDAO createPoleDAO();
+
+    public abstract InscriptionDAO createInscriptionDAO();
 }

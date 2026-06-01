@@ -61,4 +61,15 @@ public class AuthServlet extends HttpServlet {
             res.getWriter().write("{\"authenticated\": false}");
         }
     }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        HttpSession session = req.getSession(false);
+
+        if (session != null) {
+            session.invalidate();
+        }
+
+        res.getWriter().write("{\"success\": true, \"message\": \"Deconnecte\"}");
+    }
 }
