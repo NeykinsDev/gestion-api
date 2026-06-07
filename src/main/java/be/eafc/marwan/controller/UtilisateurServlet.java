@@ -1,16 +1,16 @@
 package be.eafc.marwan.controller;
 
+import be.eafc.marwan.model.Administrateur;
 import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-
 import java.io.IOException;
 import java.util.List;
 
-@WebServlet("/utilisateurs")
+@WebServlet("/utilisateurs/*")
 public class UtilisateurServlet extends HttpServlet {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -21,55 +21,57 @@ public class UtilisateurServlet extends HttpServlet {
         res.getWriter().write(json);
     }
 
-    private Utilisateur getUser(HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null) return null;
-
-        Object obj = session.getAttribute("user");
-        if (obj instanceof Utilisateur) return (Utilisateur) obj;
-
-        return null;
-    }
-
     private boolean isAdmin(HttpServletRequest req) {
-        Utilisateur u = getUser(req);
-        return u != null && "ADMIN".equals(u.getRole());
+        HttpSession session = req.getSession(false);
+        if (session == null) return false;
+        Object obj = session.getAttribute("user");
+        return obj instanceof Utilisateur && "ADMIN".equals(((Utilisateur) obj).getRole());
     }
 
+    // 1. RECHERCHE & FILTRAGE (100% JSON)
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        res.setContentType("application/json");
+        res.setCharacterEncoding("UTF-8");
+        String pathInfo = req.getPathInfo();
+
+        // Si c'est l'inscription d'un nouvel étudiant, pas besoin d'être Admin
+        if (pathInfo == null || pathInfo.equals("/")) {
+            Utilisateur u = mapper.readValue(req.getInputStream(), Utilisateur.class);
+            boolean cree = u.enregistrer();
+            if (cree) {
+                writeJson(res, "{\"success\": true, \"message\": \"Utilisateur cree\"}");
+            } else {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, "{\"success\": false, \"message\": \"Email deja utilise ou donnees invalides\"}");
+            }
+            return;
+        }
+
+        // Sécurité Admin pour la recherche globale
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
             writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
             return;
         }
 
-        String role = req.getParameter("role");
-        List<Utilisateur> utilisateurs;
+        if (pathInfo.equals("/rechercher")) {
+            JsonNode node = mapper.readTree(req.getInputStream());
+            String roleSaisi = node.has("role") ? node.get("role").asText() : "";
 
-        if (role != null && !role.isBlank()) {
-            utilisateurs = Utilisateur.findByRole(role);
-        } else {
-            utilisateurs = Utilisateur.findAll();
-        }
+            Administrateur admin = new Administrateur();
+            List<Utilisateur> list;
 
-        writeJson(res, mapper.writeValueAsString(utilisateurs));
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        Utilisateur u = mapper.readValue(req.getInputStream(), Utilisateur.class);
-
-        boolean cree = u.enregistrer();
-
-        if (cree) {
-            writeJson(res, "{\"success\": true, \"message\": \"Utilisateur cree\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Email deja utilise ou donnees invalides\"}");
+            if (roleSaisi != null && !roleSaisi.isBlank()) {
+                list = admin.recupererUtilisateursParRole(roleSaisi);
+            } else {
+                list = admin.recupererTousUtilisateurs();
+            }
+            writeJson(res, mapper.writeValueAsString(list));
         }
     }
 
+    // 2. MODIFICATION DE RÔLE (100% JSON)
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (!isAdmin(req)) {
@@ -79,11 +81,11 @@ public class UtilisateurServlet extends HttpServlet {
         }
 
         JsonNode node = mapper.readTree(req.getInputStream());
-
         int utilisateurId = node.get("utilisateurId").asInt();
         String role = node.get("role").asText();
 
-        boolean ok = Utilisateur.modifierRole(utilisateurId, role);
+        Administrateur admin = new Administrateur();
+        boolean ok = admin.changerRoleUtilisateur(utilisateurId, role);
 
         if (ok) {
             writeJson(res, "{\"success\": true, \"message\": \"Role modifie\"}");

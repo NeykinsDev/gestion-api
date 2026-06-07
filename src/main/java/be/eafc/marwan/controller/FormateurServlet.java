@@ -8,8 +8,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
 import java.io.IOException;
+import java.util.List;
 
-@WebServlet("/formateur")
+@WebServlet("/formateur/*") // Écoute le sous-routage
 public class FormateurServlet extends HttpServlet {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -20,19 +21,10 @@ public class FormateurServlet extends HttpServlet {
         res.getWriter().write(json);
     }
 
-    private Utilisateur getUser(HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null) return null;
-
-        Object obj = session.getAttribute("user");
-        if (obj instanceof Utilisateur) return (Utilisateur) obj;
-
-        return null;
-    }
-
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        Utilisateur user = getUser(req);
+        HttpSession session = req.getSession(false);
+        Utilisateur user = (session != null) ? (Utilisateur) session.getAttribute("user") : null;
 
         if (user == null || !"FORMATEUR".equals(user.getRole())) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -40,12 +32,20 @@ public class FormateurServlet extends HttpServlet {
             return;
         }
 
-        String action = req.getParameter("action");
+        String pathInfo = req.getPathInfo();
 
-        if ("historique".equals(action)) {
-            writeJson(res, mapper.writeValueAsString(Session.findHistoriqueFormateur(user.getId())));
+        // Approche OOP : On instancie un objet Session filtre et on lui injecte le formateur connecté
+        Session filtre = new Session();
+        filtre.setFormateur(user);
+
+        // Routage REST par URL, sans aucun req.getParameter()
+        if (pathInfo != null && pathInfo.equals("/historique")) {
+            filtre.setTypeRecherche("HISTORIQUE");
         } else {
-            writeJson(res, mapper.writeValueAsString(Session.findPlanningFormateur(user.getId())));
+            filtre.setTypeRecherche("PLANNING");
         }
+
+        List<Session> list = filtre.rechercher();
+        writeJson(res, mapper.writeValueAsString(list));
     }
 }

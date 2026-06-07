@@ -110,28 +110,4 @@ public class Utilisateur {
 
         return null;
     }
-
-    public static List<Utilisateur> findAll() {
-        return AbstractDAOFactory.getFactory()
-                .createUtilisateurDAO()
-                .findAll();
-    }
-
-    public static List<Utilisateur> findByRole(String role) {
-        return AbstractDAOFactory.getFactory()
-                .createUtilisateurDAO()
-                .findByRole(role);
-    }
-
-    public static boolean modifierRole(int utilisateurId, String nouveauRole) {
-        if (!"ETUDIANT".equals(nouveauRole)
-                && !"ADMIN".equals(nouveauRole)
-                && !"FORMATEUR".equals(nouveauRole)) {
-            return false;
-        }
-
-        return AbstractDAOFactory.getFactory()
-                .createUtilisateurDAO()
-                .updateRole(utilisateurId, nouveauRole);
-    }
 }

@@ -19,11 +19,7 @@ public class MySqlSessionDAO implements SessionDAO {
     }
 
     private Session map(ResultSet rs) throws SQLException {
-        Pole pole = new Pole(
-                rs.getInt("pole_id"),
-                rs.getString("pole_nom"),
-                null
-        );
+        Pole pole = new Pole(rs.getInt("pole_id"), rs.getString("pole_nom"), null);
 
         Formation formation = new Formation(
                 rs.getInt("formation_id"),
@@ -35,7 +31,6 @@ public class MySqlSessionDAO implements SessionDAO {
         );
 
         Utilisateur formateur = null;
-
         int formateurId = rs.getInt("formateur_id");
         if (!rs.wasNull()) {
             formateur = new Utilisateur();
@@ -58,150 +53,81 @@ public class MySqlSessionDAO implements SessionDAO {
     }
 
     private String baseSql() {
-        return """
-                SELECT
-                    s.*,
-                    f.id AS formation_id,
-                    f.titre AS formation_titre,
-                    f.description AS formation_description,
-                    f.duree_heures,
-                    f.prix,
-                    p.id AS pole_id,
-                    p.nom AS pole_nom,
-                    u.nom AS formateur_nom,
-                    u.prenom AS formateur_prenom,
-                    u.email AS formateur_email
-                FROM session s
-                JOIN formation f ON s.formation_id = f.id
-                JOIN pole p ON f.pole_id = p.id
-                LEFT JOIN utilisateur u ON s.formateur_id = u.id
+        return """  
+                SELECT s.*, f.id AS formation_id, f.titre AS formation_titre,  
+                       f.description AS formation_description, f.duree_heures, f.prix,  
+                       p.id AS pole_id, p.nom AS pole_nom,  
+                       u.nom AS formateur_nom, u.prenom AS formateur_prenom, u.email AS formateur_email  
+                FROM session s  
+                JOIN formation f ON s.formation_id = f.id  
+                JOIN pole p ON f.pole_id = p.id  
+                LEFT JOIN utilisateur u ON s.formateur_id = u.id  
                 """;
     }
 
     @Override
-    public List<Session> findAll() {
+    public List<Session> findByCritere(Session session) {
         List<Session> list = new ArrayList<>();
-        String sql = baseSql() + " ORDER BY s.date_debut";
+        StringBuilder sql = new StringBuilder(baseSql() + " WHERE 1=1");
 
-        try (PreparedStatement ps = c.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-
-            while (rs.next()) list.add(map(rs));
-
-        } catch (SQLException e) {
-            e.printStackTrace();
+        // 1. Filtrage par ID unique de session (Remplace findById)
+        if (session.getId() != 0) {
+            sql.append(" AND s.id = ?");
+        }
+        // 2. Filtrage par Formation (Remplace findByFormation)
+        if (session.getFormation() != null && session.getFormation().getId() != null && session.getFormation().getId() != 0) {
+            sql.append(" AND s.formation_id = ?");
+        }
+        // 3. Filtrage par Formateur (Planning / Historique)
+        if (session.getFormateur() != null && session.getFormateur().getId() != 0) {
+            sql.append(" AND s.formateur_id = ?");
+            if ("PLANNING".equals(session.getTypeRecherche())) {
+                sql.append(" AND s.date_debut >= CURDATE()");
+            } else if ("HISTORIQUE".equals(session.getTypeRecherche())) {
+                sql.append(" AND s.date_debut < CURDATE()");
+            }
         }
 
-        return list;
-    }
+        sql.append(" ORDER BY s.date_debut ASC");
 
-    @Override
-    public Session findById(int id) {
-        String sql = baseSql() + " WHERE s.id = ?";
-
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, id);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return map(rs);
+        try (PreparedStatement ps = c.prepareStatement(sql.toString())) {
+            int paramIndex = 1;
+            if (session.getId() != 0) {
+                ps.setInt(paramIndex++, session.getId());
+            }
+            if (session.getFormation() != null && session.getFormation().getId() != null && session.getFormation().getId() != 0) {
+                ps.setInt(paramIndex++, session.getFormation().getId());
+            }
+            if (session.getFormateur() != null && session.getFormateur().getId() != 0) {
+                ps.setInt(paramIndex++, session.getFormateur().getId());
             }
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
-    @Override
-    public List<Session> findByFormation(int formationId) {
-        List<Session> list = new ArrayList<>();
-        String sql = baseSql() + " WHERE s.formation_id = ? ORDER BY s.date_debut";
-
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, formationId);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(map(rs));
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(map(rs));
             }
-
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-        return list;
-    }
-
-    @Override
-    public List<Session> findPlanningFormateur(int formateurId) {
-        List<Session> list = new ArrayList<>();
-        String sql = baseSql() + """
-                WHERE s.formateur_id = ?
-                AND s.date_debut >= CURDATE()
-                ORDER BY s.date_debut
-                """;
-
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, formateurId);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(map(rs));
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return list;
-    }
-
-    @Override
-    public List<Session> findHistoriqueFormateur(int formateurId) {
-        List<Session> list = new ArrayList<>();
-        String sql = baseSql() + """
-                WHERE s.formateur_id = ?
-                AND s.date_debut < CURDATE()
-                ORDER BY s.date_debut DESC
-                """;
-
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, formateurId);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(map(rs));
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
         return list;
     }
 
     @Override
     public boolean insert(Session s) {
-        String sql = """
-                INSERT INTO session (formation_id, formateur_id, date_debut, horaire, modalite, capacite_max)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """;
-
+        String sql = "INSERT INTO session (formation_id, formateur_id, date_debut, horaire, modalite, capacite_max) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, s.getFormation().getId());
-
             if (s.getFormateur() != null && s.getFormateur().getId() != 0) {
                 ps.setInt(2, s.getFormateur().getId());
             } else {
                 ps.setNull(2, Types.INTEGER);
             }
-
             ps.setDate(3, Date.valueOf(s.getDateDebut()));
             ps.setString(4, s.getHoraire());
             ps.setString(5, s.getModalite());
             ps.setInt(6, s.getCapaciteMax());
-
             return ps.executeUpdate() > 0;
-
-        } catch (SQLException | NullPointerException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
@@ -209,30 +135,21 @@ public class MySqlSessionDAO implements SessionDAO {
 
     @Override
     public boolean update(Session s) {
-        String sql = """
-                UPDATE session
-                SET formation_id = ?, formateur_id = ?, date_debut = ?, horaire = ?, modalite = ?, capacite_max = ?
-                WHERE id = ?
-                """;
-
+        String sql = "UPDATE session SET formation_id = ?, formateur_id = ?, date_debut = ?, horaire = ?, modalite = ?, capacite_max = ? WHERE id = ?";
         try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, s.getFormation().getId());
-
             if (s.getFormateur() != null && s.getFormateur().getId() != 0) {
                 ps.setInt(2, s.getFormateur().getId());
             } else {
                 ps.setNull(2, Types.INTEGER);
             }
-
             ps.setDate(3, Date.valueOf(s.getDateDebut()));
             ps.setString(4, s.getHoraire());
             ps.setString(5, s.getModalite());
             ps.setInt(6, s.getCapaciteMax());
             ps.setInt(7, s.getId());
-
             return ps.executeUpdate() > 0;
-
-        } catch (SQLException | NullPointerException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
@@ -241,19 +158,12 @@ public class MySqlSessionDAO implements SessionDAO {
     @Override
     public boolean delete(int id) {
         String sql = "DELETE FROM session WHERE id = ?";
-
         try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
-
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
-    }
-
-    @Override
-    public List<Session> findByCritere(Session session) {
-        return List.of();
     }
 }

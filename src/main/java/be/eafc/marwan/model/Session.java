@@ -15,6 +15,7 @@ public class Session {
     private String horaire;
     private String modalite;
     private int capaciteMax;
+    private String typeRecherche;
 
     public Session() {}
 
@@ -61,106 +62,64 @@ public class Session {
                 .delete(id);
     }
 
-    public static List<Session> findAll() {
-        return AbstractDAOFactory.getFactory()
-                .createSessionDAO()
-                .findAll();
-    }
-
-    public static Session findById(int id) {
-        return AbstractDAOFactory.getFactory()
-                .createSessionDAO()
-                .findById(id);
-    }
-
-    public static List<Session> findByFormation(int formationId) {
-        return AbstractDAOFactory.getFactory()
-                .createSessionDAO()
-                .findByFormation(formationId);
-    }
-
     public List<Session> rechercher() {
         SessionDAO dao = AbstractDAOFactory.getFactory().createSessionDAO();
         return dao.findByCritere(this);
     }
 
-    public boolean supprimer() {
-        if (this.id == null || this.id == 0) return false;
-        SessionDAO dao = AbstractDAOFactory.getFactory().createSessionDAO();
-        return dao.delete(this.id);
-    }
-
-    public static List<Session> findPlanningFormateur(int formateurId) {
-        return AbstractDAOFactory.getFactory()
-                .createSessionDAO()
-                .findPlanningFormateur(formateurId);
-    }
-
-    public static List<Session> findHistoriqueFormateur(int formateurId) {
-        return AbstractDAOFactory.getFactory()
-                .createSessionDAO()
-                .findHistoriqueFormateur(formateurId);
-    }
-
     public int getId() {
         return id;
     }
-
     public void setId(int id) {
         this.id = id;
     }
 
-
     public Formation getFormation() {
         return formation;
     }
-
     public void setFormation(Formation formation) {
         this.formation = formation;
     }
 
-
     public Utilisateur getFormateur() {
         return formateur;
     }
-
     public void setFormateur(Utilisateur formateur) {
         this.formateur = formateur;
     }
 
-
     public LocalDate getDateDebut() {
         return dateDebut;
     }
-
     public void setDateDebut(LocalDate dateDebut) {
         this.dateDebut = dateDebut;
     }
 
-
     public String getHoraire() {
         return horaire;
     }
-
     public void setHoraire(String horaire) {
         this.horaire = horaire;
     }
 
-
     public String getModalite() {
         return modalite;
     }
-
     public void setModalite(String modalite) {
         this.modalite = modalite;
     }
 
-
     public int getCapaciteMax() {
         return capaciteMax;
     }
-
     public void setCapaciteMax(int capaciteMax) {
         this.capaciteMax = capaciteMax;
+    }
+
+    public String getTypeRecherche(){
+        return typeRecherche;
+    }
+    public void setTypeRecherche(String typeRecherche){
+        this.typeRecherche = typeRecherche;
     }
 }
