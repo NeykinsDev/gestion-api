@@ -18,10 +18,10 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
 
     private String genererCommunication(int etudiantId, int sessionId) {
         int a = etudiantId % 1000;
-        int b = sessionId % 1000;
-        int c = (int) (System.currentTimeMillis() % 10000);
+        int b = sessionId % 10000;
+        int c = (int) (System.currentTimeMillis() % 100000);
 
-        return String.format("+++%03d/%03d/%04d+++", a, b, c);
+        return String.format("+++%03d/%04d/%05d+++", a, b, c); // 3 4 5
     }
 
     private boolean sessionEstComplete(int sessionId) throws SQLException {

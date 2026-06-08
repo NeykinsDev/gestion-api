@@ -74,7 +74,7 @@ public class InscriptionServlet extends HttpServlet {
                             .findFirst().orElse(null);
 
                     double montant = (s != null) ? s.getFormation().getPrix() : 0.0;
-                    String comm = inscription.getCommunicationStructuree(); // Générée par le DAO
+                    String comm = inscription.getCommunicationStructuree();
 
                     writeJson(res, "{"
                             + "\"success\": true,"
