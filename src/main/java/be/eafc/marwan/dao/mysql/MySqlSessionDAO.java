@@ -70,11 +70,11 @@ public class MySqlSessionDAO implements SessionDAO {
         List<Session> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder(baseSql() + " WHERE 1=1");
 
-        // 1. Filtrage par ID unique de session (Remplace findById)
-        if (session.getId() != 0) {
+        // 1. Filtrage par ID unique de session
+        if (session.getId() != null && session.getId() != 0) {
             sql.append(" AND s.id = ?");
         }
-        // 2. Filtrage par Formation (Remplace findByFormation)
+        // 2. Filtrage par Formation
         if (session.getFormation() != null && session.getFormation().getId() != null && session.getFormation().getId() != 0) {
             sql.append(" AND s.formation_id = ?");
         }
@@ -92,7 +92,8 @@ public class MySqlSessionDAO implements SessionDAO {
 
         try (PreparedStatement ps = c.prepareStatement(sql.toString())) {
             int paramIndex = 1;
-            if (session.getId() != 0) {
+            // CORRECTION ICI : Utilisation du check avec le null partout
+            if (session.getId() != null && session.getId() != 0) {
                 ps.setInt(paramIndex++, session.getId());
             }
             if (session.getFormation() != null && session.getFormation().getId() != null && session.getFormation().getId() != 0) {

@@ -7,7 +7,7 @@ import java.util.List;
 
 public class Inscription {
 
-    private Integer id; // Changé en Integer pour accepter la valeur null
+    private Integer id;
     private Utilisateur etudiant;
     private Session session;
     private LocalDateTime dateInscription;
@@ -30,17 +30,14 @@ public class Inscription {
         this.paiementValide = paiementValide;
     }
 
-    // --- LOGIQUE MÉTIER OOP (ZÉRO STATIC) ---
 
     public boolean enregistrer() {
         if (etudiant == null || etudiant.getId() == 0) return false;
-        if (session == null || session.getId() == null || session.getId() == 0) return false;
+        if (session == null || session.getId() == 0) return false;
 
         return AbstractDAOFactory.getFactory().createInscriptionDAO().insert(this);
     }
 
-    /** * Recherche dynamique (Query by Example) : si l'étudiant est configuré dans l'objet,
-     * renvoie son historique personnel. Sinon, renvoie l'intégralité du centre (Pour l'Admin). */
     public List<Inscription> rechercher() {
         InscriptionDAO dao = AbstractDAOFactory.getFactory().createInscriptionDAO();
         if (this.etudiant != null && this.etudiant.getId() != 0) {
@@ -67,7 +64,6 @@ public class Inscription {
         return AbstractDAOFactory.getFactory().createInscriptionDAO().updateStatut(this.id, this.statut);
     }
 
-    // --- GETTERS & SETTERS ---
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 

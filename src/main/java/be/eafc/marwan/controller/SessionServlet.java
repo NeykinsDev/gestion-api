@@ -45,9 +45,7 @@ public class SessionServlet extends HttpServlet {
         String pathInfo = req.getPathInfo();
 
         try {
-            // 1. RECHERCHE / FILTRAGE / LISTAGE (Accessible par tous)
             if (pathInfo != null && pathInfo.equals("/rechercher")) {
-                // L'objet filtre encaisse le JSON (peut contenir un id ou un formationId)
                 Session filtre = mapper.readValue(req.getInputStream(), Session.class);
                 List<Session> list = filtre.rechercher();
 
@@ -55,14 +53,12 @@ public class SessionServlet extends HttpServlet {
                 return;
             }
 
-            // --- SÉCURITÉ : TOUTES LES AUTRES ACTIONS DEMANDENT LE RÔLE ADMIN ---
             if (!isAdmin(req)) {
                 res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
                 return;
             }
 
-            // 2. CRÉATION
             if (pathInfo == null || pathInfo.equals("/") || pathInfo.equals("/creer")) {
                 Session s = mapper.readValue(req.getInputStream(), Session.class);
                 boolean ok = s.enregistrer();
@@ -76,7 +72,6 @@ public class SessionServlet extends HttpServlet {
                 return;
             }
 
-            // 3. MODIFICATION
             if (pathInfo.equals("/modifier")) {
                 Session s = mapper.readValue(req.getInputStream(), Session.class);
                 boolean ok = s.modifier();
@@ -90,9 +85,7 @@ public class SessionServlet extends HttpServlet {
                 return;
             }
 
-            // 4. SUPPRESSION
             if (pathInfo.equals("/supprimer")) {
-                // OOP : On mappe le JSON {"id": X} directement dans l'instance
                 Session s = mapper.readValue(req.getInputStream(), Session.class);
                 boolean ok = s.supprimer();
 
@@ -105,7 +98,6 @@ public class SessionServlet extends HttpServlet {
                 return;
             }
 
-            // Route inconnue
             res.setStatus(HttpServletResponse.SC_NOT_FOUND);
             writeJson(res, "{\"success\": false, \"message\": \"URL introuvable\"}");
 

@@ -29,7 +29,6 @@ public class PoleServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String pathInfo = req.getPathInfo();
 
-        // 1. RECHERCHE (Tout lister ou un seul par ID)
         if (pathInfo != null && pathInfo.equals("/rechercher")) {
             Pole filtre = mapper.readValue(req.getInputStream(), Pole.class);
             if (filtre.getId() != null && filtre.getId() > 0) {
@@ -40,14 +39,12 @@ public class PoleServlet extends HttpServlet {
             return;
         }
 
-        // SÉCURITÉ ADMIN POUR LE RESTE
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
             writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
             return;
         }
 
-        // 2. CRÉATION
         if (pathInfo == null || pathInfo.equals("/")) {
             Pole p = mapper.readValue(req.getInputStream(), Pole.class);
             if (p.enregistrer()) writeJson(res, "{\"success\": true, \"message\": \"Pole cree\"}");
@@ -55,7 +52,6 @@ public class PoleServlet extends HttpServlet {
             return;
         }
 
-        // 3. MODIFICATION
         if (pathInfo.equals("/modifier")) {
             Pole p = mapper.readValue(req.getInputStream(), Pole.class);
             if (p.modifier()) writeJson(res, "{\"success\": true, \"message\": \"Pole modifie\"}");
@@ -63,7 +59,6 @@ public class PoleServlet extends HttpServlet {
             return;
         }
 
-        // 4. SUPPRESSION (Reçoit {"id": X} en JSON dans le body)
         if (pathInfo.equals("/supprimer")) {
             Pole p = mapper.readValue(req.getInputStream(), Pole.class);
             if (p.supprimer()) writeJson(res, "{\"success\": true, \"message\": \"Pole supprime\"}");

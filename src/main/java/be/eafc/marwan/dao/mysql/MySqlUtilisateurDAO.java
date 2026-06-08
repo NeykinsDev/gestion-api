@@ -29,7 +29,7 @@ public class MySqlUtilisateurDAO implements UtilisateurDAO {
                 rs.getString("prenom"),
                 rs.getString("email"),
                 rs.getString("mot_de_passe"),
-                rs.getString("role"),
+                rs.getString("role") != null ? rs.getString("role").toUpperCase() : null,
                 rs.getTimestamp("created_at") != null
                         ? rs.getTimestamp("created_at").toLocalDateTime()
                         : null

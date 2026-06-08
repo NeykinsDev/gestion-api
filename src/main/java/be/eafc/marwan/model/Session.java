@@ -54,12 +54,10 @@ public class Session {
                 .update(this);
     }
 
-    public static boolean supprimer(int id) {
-        if (id <= 0) return false;
-
-        return AbstractDAOFactory.getFactory()
-                .createSessionDAO()
-                .delete(id);
+    public boolean supprimer() {
+        if (id == 0) return false;
+        SessionDAO dao = AbstractDAOFactory.getFactory().createSessionDAO();
+        return dao.delete(id);
     }
 
     public List<Session> rechercher() {
@@ -67,7 +65,7 @@ public class Session {
         return dao.findByCritere(this);
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
     public void setId(int id) {

@@ -1,10 +1,9 @@
 package be.eafc.marwan.controller;
 
-import be.eafc.marwan.model.Administrateur;
 import be.eafc.marwan.model.Utilisateur;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
@@ -21,26 +20,31 @@ public class UtilisateurServlet extends HttpServlet {
         res.getWriter().write(json);
     }
 
-    private boolean isAdmin(HttpServletRequest req) {
+    private Utilisateur getConnectedUser(HttpServletRequest req) {
         HttpSession session = req.getSession(false);
-        if (session == null) return false;
+        if (session == null) return null;
         Object obj = session.getAttribute("user");
-        return obj instanceof Utilisateur && "ADMIN".equals(((Utilisateur) obj).getRole());
+        if (obj instanceof Utilisateur) return (Utilisateur) obj;
+        return null;
     }
 
-    // 1. RECHERCHE & FILTRAGE (100% JSON)
+    private boolean isAdmin(HttpServletRequest req) {
+        Utilisateur u = getConnectedUser(req);
+        return u != null && "ADMIN".equals(u.getRole());
+    }
+
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         res.setContentType("application/json");
         res.setCharacterEncoding("UTF-8");
         String pathInfo = req.getPathInfo();
 
-        // Si c'est l'inscription d'un nouvel étudiant, pas besoin d'être Admin
         if (pathInfo == null || pathInfo.equals("/")) {
             Utilisateur u = mapper.readValue(req.getInputStream(), Utilisateur.class);
             boolean cree = u.enregistrer();
+
             if (cree) {
-                writeJson(res, "{\"success\": true, \"message\": \"Utilisateur cree\"}");
+                writeJson(res, "{\"success\": true, \"message\": \"Utilisateur cree avec succes\"}");
             } else {
                 res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 writeJson(res, "{\"success\": false, \"message\": \"Email deja utilise ou donnees invalides\"}");
@@ -48,7 +52,6 @@ public class UtilisateurServlet extends HttpServlet {
             return;
         }
 
-        // Sécurité Admin pour la recherche globale
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
             writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
@@ -56,42 +59,42 @@ public class UtilisateurServlet extends HttpServlet {
         }
 
         if (pathInfo.equals("/rechercher")) {
-            JsonNode node = mapper.readTree(req.getInputStream());
-            String roleSaisi = node.has("role") ? node.get("role").asText() : "";
-
-            Administrateur admin = new Administrateur();
-            List<Utilisateur> list;
-
-            if (roleSaisi != null && !roleSaisi.isBlank()) {
-                list = admin.recupererUtilisateursParRole(roleSaisi);
-            } else {
-                list = admin.recupererTousUtilisateurs();
-            }
+            Utilisateur filtre = mapper.readValue(req.getInputStream(), Utilisateur.class);
+            List<Utilisateur> list = filtre.rechercher();
             writeJson(res, mapper.writeValueAsString(list));
+            return;
         }
+
+        res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        writeJson(res, "{\"success\": false, \"message\": \"URL introuvable\"}");
     }
 
-    // 2. MODIFICATION DE RÔLE (100% JSON)
     @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
+    protected void doPut(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+        res.setContentType("application/json");
+        res.setCharacterEncoding("UTF-8");
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
             writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
             return;
         }
 
-        JsonNode node = mapper.readTree(req.getInputStream());
-        int utilisateurId = node.get("utilisateurId").asInt();
-        String role = node.get("role").asText();
+        String pathInfo = req.getPathInfo();
 
-        Administrateur admin = new Administrateur();
-        boolean ok = admin.changerRoleUtilisateur(utilisateurId, role);
+        if (pathInfo != null && pathInfo.equals("/modifier-role")) {
+            Utilisateur u = mapper.readValue(req.getInputStream(), Utilisateur.class);
+            boolean ok = u.modifierRole();
 
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Role modifie\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Role invalide ou modification impossible\"}");
+            if (ok) {
+                writeJson(res, "{\"success\": true, \"message\": \"Role modifie avec succes\"}");
+            } else {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, "{\"success\": false, \"message\": \"Modification impossible (role ou id invalide)\"}");
+            }
+            return;
         }
+
+        res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        writeJson(res, "{\"success\": false, \"message\": \"URL introuvable\"}");
     }
 }

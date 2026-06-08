@@ -37,7 +37,6 @@ public class Formation {
         return dao.insert(this);
     }
 
-    // --- GETTERS & SETTERS ---
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 

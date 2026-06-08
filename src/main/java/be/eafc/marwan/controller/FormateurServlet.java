@@ -10,7 +10,7 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.List;
 
-@WebServlet("/formateur/*") // Écoute le sous-routage
+@WebServlet("/formateur/*")
 public class FormateurServlet extends HttpServlet {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -34,11 +34,9 @@ public class FormateurServlet extends HttpServlet {
 
         String pathInfo = req.getPathInfo();
 
-        // Approche OOP : On instancie un objet Session filtre et on lui injecte le formateur connecté
         Session filtre = new Session();
         filtre.setFormateur(user);
 
-        // Routage REST par URL, sans aucun req.getParameter()
         if (pathInfo != null && pathInfo.equals("/historique")) {
             filtre.setTypeRecherche("HISTORIQUE");
         } else {

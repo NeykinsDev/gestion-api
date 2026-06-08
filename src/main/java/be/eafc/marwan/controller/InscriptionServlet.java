@@ -1,6 +1,7 @@
 package be.eafc.marwan.controller;
 
 import be.eafc.marwan.model.Inscription;
+import be.eafc.marwan.model.Session;
 import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -39,10 +40,8 @@ public class InscriptionServlet extends HttpServlet {
         }
 
         try {
-            // 1. RECHERCHE / HISTORIQUE CONSOLIDÉ (Query by Example)
             if (pathInfo != null && pathInfo.equals("/rechercher")) {
                 Inscription query = new Inscription();
-                // Sécurité : Si l'utilisateur connecté est un étudiant, il ne peut voir QUE son historique
                 if ("ETUDIANT".equals(user.getRole())) {
                     query.setEtudiant(user);
                 } else if (!"ADMIN".equals(user.getRole())) {
@@ -56,19 +55,35 @@ public class InscriptionServlet extends HttpServlet {
                 return;
             }
 
-            // 2. CRÉATION D'UNE INSCRIPTION A UNE SESSION
             if (pathInfo == null || pathInfo.equals("/")) {
-                if (!"ETUDIANT".equals(user.getRole())) {
+                if (!"ETUDIANT".equals(user.getRole()) && !"ADMIN".equals(user.getRole())) {
                     res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    writeJson(res, "{\"success\": false, \"message\": \"Action reservee aux etudiants\"}");
+                    writeJson(res, "{\"success\": false, \"message\": \"Action non autorisée\"}");
                     return;
                 }
 
                 Inscription inscription = mapper.readValue(req.getInputStream(), Inscription.class);
-                inscription.setEtudiant(user); // Injection forcée de l'étudiant de session
+
+                if ("ETUDIANT".equals(user.getRole())) {
+                    inscription.setEtudiant(user);
+                }
 
                 if (inscription.enregistrer()) {
-                    writeJson(res, "{\"success\": true, \"message\": \"Inscription reussie\"}");
+                    Session s = inscription.getSession().rechercher().stream()
+                            .filter(sess -> sess.getId() == inscription.getSession().getId())
+                            .findFirst().orElse(null);
+
+                    double montant = (s != null) ? s.getFormation().getPrix() : 0.0;
+                    String comm = inscription.getCommunicationStructuree(); // Générée par le DAO
+
+                    writeJson(res, "{"
+                            + "\"success\": true,"
+                            + "\"message\": \"Inscription réussie\","
+                            + "\"montant\": " + montant + ","
+                            + "\"iban\": \"BE96 3630 1234 5678\","
+                            + "\"communication\": \"" + comm + "\""
+                            + "}");
+                    return;
                 } else {
                     res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     writeJson(res, "{\"success\": false, \"message\": \"Capacite maximale atteinte ou session invalide\"}");
@@ -82,7 +97,6 @@ public class InscriptionServlet extends HttpServlet {
         }
     }
 
-    // 3. LOGIQUE ADMINISTRATIVE : MODIFICATION DU STATUT DU PARCOURS
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
         Utilisateur user = getConnectedUser(req);

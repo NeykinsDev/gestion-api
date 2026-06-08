@@ -5,7 +5,7 @@ import java.util.List;
 
 public class Pole {
 
-    private Integer id; // Utiliser l'objet Integer pour gérer le null
+    private Integer id;
     private String nom;
     private String description;
 
@@ -17,7 +17,6 @@ public class Pole {
         this.description = description;
     }
 
-    // --- LOGIQUE MÉTIER OOP (ZÉRO STATIC, ZÉRO PARAMÈTRE) ---
 
     public List<Pole> rechercher() {
         return AbstractDAOFactory.getFactory().createPoleDAO().findAll();
@@ -44,7 +43,6 @@ public class Pole {
         return AbstractDAOFactory.getFactory().createPoleDAO().delete(this.id);
     }
 
-    // --- GETTERS & SETTERS ---
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
     public String getNom() { return nom; }

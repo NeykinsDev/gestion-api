@@ -18,7 +18,6 @@ public class PaiementServlet extends HttpServlet {
         writeJson(res, json);
     }
 
-    // 1. SIGNALEMENT DE PAIEMENT PAR L'ÉTUDIANT (JSON body: {"id": X})
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         HttpSession session = req.getSession(false);
@@ -46,7 +45,6 @@ public class PaiementServlet extends HttpServlet {
         }
     }
 
-    // 2. APPROBATION DU VIREMENT PAR L'ADMIN (JSON body: {"id": X, "paiementValide": true})
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
         HttpSession session = req.getSession(false);
