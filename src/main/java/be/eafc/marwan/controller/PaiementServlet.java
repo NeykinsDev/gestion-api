@@ -12,11 +12,11 @@ public class PaiementServlet extends HttpServlet {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    private void writeJson(HttpServletResponse res, String json) throws IOException {
-        res.setContentType("application/json");
-        res.setCharacterEncoding("UTF-8");
-        writeJson(res, json);
-    }
+//    private void writeJson(HttpServletResponse res, String json) throws IOException {
+//        res.setContentType("application/json");
+//        res.setCharacterEncoding("UTF-8");
+//        res.getWriter().write(json);
+//    }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {

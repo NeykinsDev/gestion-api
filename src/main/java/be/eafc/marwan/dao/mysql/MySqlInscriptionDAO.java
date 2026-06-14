@@ -16,36 +16,6 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
         this.c = factory.getConnection();
     }
 
-    private String genererCommunication(int etudiantId, int sessionId) {
-        int a = etudiantId % 1000;
-        int b = sessionId % 10000;
-        int c = (int) (System.currentTimeMillis() % 100000);
-
-        return String.format("+++%03d/%04d/%05d+++", a, b, c); // 3 4 5
-    }
-
-    private boolean sessionEstComplete(int sessionId) throws SQLException {
-        String sql = """
-                SELECT s.capacite_max, COUNT(i.id) AS nb
-                FROM session s
-                LEFT JOIN inscription i ON i.session_id = s.id AND i.statut <> 'ABANDONNE'
-                WHERE s.id = ?
-                GROUP BY s.id, s.capacite_max
-                """;
-
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setInt(1, sessionId);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("nb") >= rs.getInt("capacite_max");
-                }
-            }
-        }
-
-        return true;
-    }
-
     private Inscription map(ResultSet rs) throws SQLException {
         Utilisateur etudiant = new Utilisateur();
         etudiant.setId(rs.getInt("etudiant_id"));
@@ -122,32 +92,46 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
 
     @Override
     public boolean insert(Inscription inscription) {
-        String sql = """
-                INSERT INTO inscription
-                (etudiant_id, session_id, statut, communication_structuree, paiement_signale, paiement_valide)
-                VALUES (?, ?, 'INSCRIT', ?, false, false)
-                """;
+        // CORRECTION : On ajoute la colonne avec une valeur temporaire pour satisfaire le mode strict SQL
+        String sqlInsert = """
+            INSERT INTO inscription
+            (etudiant_id, session_id, statut, communication_structuree, paiement_signale, paiement_valide)
+            VALUES (?, ?, 'INSCRIT', 'PENDING_GEN', false, false)
+            """;
 
-        try {
-            int etudiantId = inscription.getEtudiant().getId();
-            int sessionId = inscription.getSession().getId();
+        try (PreparedStatement ps = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS)) {
 
-            if (sessionEstComplete(sessionId)) {
-                return false;
-            }
+            ps.setInt(1, inscription.getEtudiant().getId());
+            ps.setInt(2, inscription.getSession().getId());
 
-            try (PreparedStatement ps = c.prepareStatement(sql)) {
-                ps.setInt(1, etudiantId);
-                ps.setInt(2, sessionId);
-                ps.setString(3, genererCommunication(etudiantId, sessionId));
+            int affectedRows = ps.executeUpdate();
 
-                return ps.executeUpdate() > 0;
+            if (affectedRows > 0) {
+                try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        int newId = generatedKeys.getInt(1);
+                        inscription.setId(newId);
+
+                        // Le Trigger a écrasé 'PENDING_GEN', on récupère la vraie valeur calculée par la BDD
+                        String sqlSelect = "SELECT communication_structuree FROM inscription WHERE id = ?";
+                        try (PreparedStatement psSelect = c.prepareStatement(sqlSelect)) {
+                            psSelect.setInt(1, newId);
+                            try (ResultSet rs = psSelect.executeQuery()) {
+                                if (rs.next()) {
+                                    inscription.setCommunicationStructuree(rs.getString("communication_structuree"));
+                                }
+                            }
+                        }
+                    }
+                }
+                return true;
             }
 
         } catch (SQLException | NullPointerException e) {
             e.printStackTrace();
             return false;
         }
+        return false;
     }
 
     @Override

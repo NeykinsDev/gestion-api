@@ -73,7 +73,7 @@ public class MySqlSessionDAO implements SessionDAO {
         if (session.getId() != null && session.getId() != 0) {
             sql.append(" AND s.id = ?");
         }
-        if (session.getFormation() != null && session.getFormation().getId() != null && session.getFormation().getId() != 0) {
+        if (session.getFormation() != null && session.getFormation().getId() != 0) {
             sql.append(" AND s.formation_id = ?");
         }
         if (session.getFormateur() != null && session.getFormateur().getId() != 0) {
@@ -92,7 +92,7 @@ public class MySqlSessionDAO implements SessionDAO {
             if (session.getId() != null && session.getId() != 0) {
                 ps.setInt(paramIndex++, session.getId());
             }
-            if (session.getFormation() != null && session.getFormation().getId() != null && session.getFormation().getId() != 0) {
+            if (session.getFormation() != null && session.getFormation().getId() != 0) {
                 ps.setInt(paramIndex++, session.getFormation().getId());
             }
             if (session.getFormateur() != null && session.getFormateur().getId() != 0) {
