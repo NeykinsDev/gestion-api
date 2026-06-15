@@ -2,10 +2,6 @@ DROP DATABASE IF EXISTS centre_formations;
 CREATE DATABASE centre_formations CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE centre_formations;
 
--- ============================================================
--- TABLES STRUCTURELLES
--- ============================================================
-
 CREATE TABLE pole (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     nom         VARCHAR(100) NOT NULL UNIQUE,
@@ -58,9 +54,6 @@ CREATE TABLE inscription (
     CONSTRAINT fk_inscription_session FOREIGN KEY (session_id) REFERENCES session(id) ON DELETE CASCADE
 );
 
--- ======
--- Index
--- ======
 CREATE INDEX idx_session_dates ON session(date_debut);
 
 DELIMITER //
@@ -92,7 +85,6 @@ BEGIN
     END IF;
 END //
 
--- 2. Générer automatiquement une VRAIE communication structurée belge au format strict 3, 4, 5
 CREATE TRIGGER trg_generate_communication
 BEFORE INSERT ON inscription
 FOR EACH ROW
@@ -101,23 +93,19 @@ BEGIN
     DECLARE modulo INT;
     DECLARE extra3 VARCHAR(3);
 
-    -- Génération de 3 chiffres résiduels (basés sur un micro-compteur aléatoire sécurisé)
     SET extra3 = LPAD(FLOOR(100 + (RAND() * 899)), 3, '0');
 
-    -- Assemblage de la base de 10 chiffres requis (3 id_étudiant + 4 id_session + 3 extra)
     SET base10 = CONCAT(
         LPAD(NEW.etudiant_id, 3, '0'),
         LPAD(NEW.session_id, 4, '0'),
         extra3
     );
 
-    -- Calcul du Modulo 97 réglementaire standardisé
     SET modulo = MOD(CAST(base10 AS UNSIGNED), 97);
     IF modulo = 0 THEN
         SET modulo = 97;
     END IF;
 
-    -- Sortie au format strict 3, 4 et 5 chiffres (Le bloc 5 contient les 3 extra + les 2 du modulo de contrôle)
     SET NEW.communication_structuree = CONCAT('+++',
         LPAD(NEW.etudiant_id, 3, '0'), '/',
         LPAD(NEW.session_id, 4, '0'), '/',
@@ -125,7 +113,6 @@ BEGIN
     '+++');
 END //
 
--- 3. Transition automatique d'état de cycle de vie lors de l'approbation comptable
 CREATE TRIGGER trg_update_statut_paiement
 AFTER UPDATE ON inscription
 FOR EACH ROW
@@ -137,11 +124,6 @@ BEGIN
     END IF;
 END //
 
--- ============================================================
--- PROCEDURES STOCKÉES
--- ============================================================
-
--- 1. Procédure métier d'inscription d'un usager
 CREATE PROCEDURE inscrire_etudiant(
     IN p_etudiant_id INT,
     IN p_session_id INT,
@@ -167,12 +149,12 @@ BEGIN
         statut,
         paiement_signale,
         paiement_valide,
-        communication_structuree -- Gérée par le trigger, mais requise à blanc pour l'init
+        communication_structuree
     ) VALUES (
         p_etudiant_id,
         p_session_id,
         NOW(),
-        'INSCRIT', -- Statut initial standard
+        'INSCRIT',
         FALSE,
         FALSE,
         'PENDING_GEN'
@@ -189,7 +171,6 @@ BEGIN
     SET p_montant = v_prix;
 END //
 
--- 2. Traitement d'approbation bancaire
 CREATE PROCEDURE approuver_paiement(
     IN p_inscription_id INT,
     IN p_approuver BOOLEAN
@@ -208,7 +189,6 @@ BEGIN
     END IF;
 END //
 
--- 3. Extraction dynamique du planning d'un cadre enseignant
 CREATE PROCEDURE get_planning_formateur(
     IN p_formateur_id INT
 )
@@ -231,7 +211,6 @@ BEGIN
     ORDER BY s.date_debut ASC;
 END //
 
--- 4. Journal d'historique personnel confidentiel de l'élève
 CREATE PROCEDURE get_historique_etudiant(
     IN p_etudiant_id INT
 )
@@ -257,9 +236,6 @@ END //
 
 DELIMITER ;
 
--- ============================================================
--- JEU DE DONNÉES DE TEST COHÉRENT (UPPERCASE)
--- ============================================================
 INSERT INTO pole (nom, description) VALUES
 ('Informatique', 'Développement web, bases de données et cybersécurité'),
 ('Langues', 'Cours d''anglais, de néerlandais et de français langue étrangère'),
