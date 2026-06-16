@@ -34,7 +34,7 @@ CREATE TABLE session (
     formateur_id  INT,
     date_debut    DATE NOT NULL,
     horaire       VARCHAR(100) NOT NULL,
-    modalite      ENUM('PRESENTIEL', 'EN_LIGNE') NOT NULL, -- Correction : Passage en MAJUSCULES pour Java
+    modalite      ENUM('PRESENTIEL', 'EN_LIGNE') NOT NULL,
     capacite_max  INT NOT NULL,
     CONSTRAINT fk_session_formation FOREIGN KEY (formation_id) REFERENCES formation(id) ON DELETE CASCADE,
     CONSTRAINT fk_session_formateur FOREIGN KEY (formateur_id) REFERENCES utilisateur(id) ON DELETE RESTRICT
@@ -45,7 +45,7 @@ CREATE TABLE inscription (
     etudiant_id               INT NOT NULL,
     session_id                INT NOT NULL,
     date_inscription          DATETIME DEFAULT CURRENT_TIMESTAMP,
-    statut                    VARCHAR(50) NOT NULL DEFAULT 'INSCRIT', -- Harmonie : MAJUSCULES strictes
+    statut                    VARCHAR(50) NOT NULL DEFAULT 'INSCRIT',
     communication_structuree  VARCHAR(50) UNIQUE NOT NULL,
     paiement_signale          BOOLEAN NOT NULL DEFAULT FALSE,
     paiement_valide           BOOLEAN NOT NULL DEFAULT FALSE,
@@ -58,11 +58,7 @@ CREATE INDEX idx_session_dates ON session(date_debut);
 
 DELIMITER //
 
--- ============================================================
--- TRIGGERS (INTÉGRITÉ ET FLUX AUTOMATIQUES)
--- ============================================================
 
--- 1. Vérifier la capacité maximale de la salle/salon avant l'insertion
 CREATE TRIGGER trg_check_capacite
 BEFORE INSERT ON inscription
 FOR EACH ROW
@@ -73,7 +69,7 @@ BEGIN
     SELECT COUNT(*) INTO nb_inscrits
     FROM inscription
     WHERE session_id = NEW.session_id
-      AND statut != 'ABANDONNE'; -- Correction : Majuscule
+      AND statut != 'ABANDONNE';
 
     SELECT capacite_max INTO cap_max
     FROM session
@@ -119,7 +115,7 @@ FOR EACH ROW
 BEGIN
     IF NEW.paiement_valide = TRUE AND OLD.paiement_valide = FALSE THEN
         UPDATE inscription
-        SET statut = 'EN_COURS' -- Correction : Changement automatique vers l'état actif attendu par Java
+        SET statut = 'EN_COURS'
         WHERE id = NEW.id;
     END IF;
 END //

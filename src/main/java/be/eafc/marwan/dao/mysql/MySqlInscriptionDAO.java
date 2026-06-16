@@ -92,7 +92,6 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
 
     @Override
     public boolean insert(Inscription inscription) {
-        // CORRECTION : On ajoute la colonne avec une valeur temporaire pour satisfaire le mode strict SQL
         String sqlInsert = """
             INSERT INTO inscription
             (etudiant_id, session_id, statut, communication_structuree, paiement_signale, paiement_valide)
@@ -111,8 +110,6 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
                     if (generatedKeys.next()) {
                         int newId = generatedKeys.getInt(1);
                         inscription.setId(newId);
-
-                        // Le Trigger a écrasé 'PENDING_GEN', on récupère la vraie valeur calculée par la BDD
                         String sqlSelect = "SELECT communication_structuree FROM inscription WHERE id = ?";
                         try (PreparedStatement psSelect = c.prepareStatement(sqlSelect)) {
                             psSelect.setInt(1, newId);
