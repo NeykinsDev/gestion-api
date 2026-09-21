@@ -14,7 +14,7 @@ CREATE TABLE utilisateur (
                              prenom        VARCHAR(100) NOT NULL,
                              email         VARCHAR(150) NOT NULL UNIQUE,
                              mot_de_passe  VARCHAR(255) NOT NULL,
-                             role          ENUM('admin', 'formateur', 'etudiant') NOT NULL DEFAULT 'etudiant',
+                             role          ENUM('ADMIN', 'FORMATEUR', 'ETUDIANT') NOT NULL DEFAULT 'ETUDIANT',
                              created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -33,9 +33,9 @@ CREATE TABLE session (
                          formation_id  INT NOT NULL,
                          formateur_id  INT NOT NULL,
                          date_debut    DATE NOT NULL,
-                         date_fin      DATE NOT NULL,
+                         date_fin      DATE, -- Non geree par l'application actuellement (voir MySqlSessionDAO)
                          horaire       VARCHAR(100) NOT NULL, -- Ex: "09:00 - 17:00"
-                         modalite      ENUM('presentiel', 'en_ligne') NOT NULL, -- Fixe pour toute la session [cite: 6]
+                         modalite      ENUM('PRESENTIEL', 'EN_LIGNE') NOT NULL, -- Fixe pour toute la session [cite: 6]
                          capacite_max  INT NOT NULL,
                          CONSTRAINT fk_session_formation FOREIGN KEY (formation_id) REFERENCES formation(id) ON DELETE CASCADE,
                          CONSTRAINT fk_session_formateur FOREIGN KEY (formateur_id) REFERENCES utilisateur(id) ON DELETE RESTRICT
@@ -48,12 +48,12 @@ CREATE TABLE inscription (
                              date_inscription          DATETIME DEFAULT CURRENT_TIMESTAMP,
 
     -- Suivi du parcours étudiant
-                             statut                    ENUM('inscrit', 'en_cours', 'termine', 'abandonne') NOT NULL DEFAULT 'inscrit',
+                             statut                    ENUM('INSCRIT', 'EN_COURS', 'TERMINE', 'ABANDONNE') NOT NULL DEFAULT 'INSCRIT',
 
     -- Gestion financière [cite: 80, 83, 121]
                              communication_structuree  VARCHAR(50) UNIQUE NOT NULL,
-                             statut_paiement           ENUM('en_attente', 'confirme', 'refuse') NOT NULL DEFAULT 'en_attente',
-                             date_paiement             DATETIME,
+                             paiement_signale          BOOLEAN NOT NULL DEFAULT FALSE,
+                             paiement_valide           BOOLEAN NOT NULL DEFAULT FALSE,
 
     -- Empêche un étudiant de s'inscrire deux fois à la même session
                              UNIQUE KEY uq_etudiant_session (etudiant_id, session_id),
@@ -76,13 +76,17 @@ INSERT INTO pole (nom, description) VALUES
                                         ('Langues', 'Cours d''anglais, de néerlandais et de français langue étrangère'),
                                         ('Management', 'Gestion d''équipe, leadership et communication en entreprise');
 
+-- Mot de passe de demo pour tous les comptes ci-dessous : password123
+-- (hash BCrypt reel, genere avec la meme lib jbcrypt que l'appli ; l'ancien
+-- hash place-holder etait trop court pour etre un hash BCrypt valide et
+-- aurait empeche toute connexion de test)
 INSERT INTO utilisateur (nom, prenom, email, mot_de_passe, role) VALUES
-                                                                     ('Admin', 'System', 'admin@centre.be', '$2a$10$abcdefghijklmnopqrstuv', 'admin'),
-                                                                     ('Dupont', 'Jean', 'jean.dupont@formateur.be', '$2a$10$abcdefghijklmnopqrstuv', 'formateur'),
-                                                                     ('Lefebvre', 'Marie', 'm.lefebvre@formateur.be', '$2a$10$abcdefghijklmnopqrstuv', 'formateur'),
-                                                                     ('Peeters', 'Lucas', 'lucas.peeters@student.be', '$2a$10$abcdefghijklmnopqrstuv', 'etudiant'),
-                                                                     ('Martin', 'Sophie', 'sophie.martin@student.be', '$2a$10$abcdefghijklmnopqrstuv', 'etudiant'),
-                                                                     ('Dubois', 'Thomas', 't.dubois@student.be', '$2a$10$abcdefghijklmnopqrstuv', 'etudiant');
+                                                                     ('Admin', 'System', 'admin@centre.be', '$2a$10$QGVbea/6YiWkCunS2GVAR..Q1rqOFSg57gNIdTtJhTyJjylGQ6m26', 'ADMIN'),
+                                                                     ('Dupont', 'Jean', 'jean.dupont@formateur.be', '$2a$10$QGVbea/6YiWkCunS2GVAR..Q1rqOFSg57gNIdTtJhTyJjylGQ6m26', 'FORMATEUR'),
+                                                                     ('Lefebvre', 'Marie', 'm.lefebvre@formateur.be', '$2a$10$QGVbea/6YiWkCunS2GVAR..Q1rqOFSg57gNIdTtJhTyJjylGQ6m26', 'FORMATEUR'),
+                                                                     ('Peeters', 'Lucas', 'lucas.peeters@student.be', '$2a$10$QGVbea/6YiWkCunS2GVAR..Q1rqOFSg57gNIdTtJhTyJjylGQ6m26', 'ETUDIANT'),
+                                                                     ('Martin', 'Sophie', 'sophie.martin@student.be', '$2a$10$QGVbea/6YiWkCunS2GVAR..Q1rqOFSg57gNIdTtJhTyJjylGQ6m26', 'ETUDIANT'),
+                                                                     ('Dubois', 'Thomas', 't.dubois@student.be', '$2a$10$QGVbea/6YiWkCunS2GVAR..Q1rqOFSg57gNIdTtJhTyJjylGQ6m26', 'ETUDIANT');
 
 INSERT INTO formation (pole_id, titre, description, duree_heures, prix) VALUES
                                                                             (1, 'Java Web Servlet', 'Apprendre le développement Java avec Servlets et JDBC', 60, 450.00),
@@ -90,14 +94,14 @@ INSERT INTO formation (pole_id, titre, description, duree_heures, prix) VALUES
                                                                             (2, 'Anglais Business', 'Communication professionnelle en milieu anglophone', 30, 250.00);
 
 INSERT INTO session (formation_id, formateur_id, date_debut, date_fin, horaire, modalite, capacite_max) VALUES
-                                                                                                            (1, 2, '2025-09-01', '2025-12-15', 'Lundi 18:00 - 21:00', 'en_ligne', 15),
-                                                                                                            (2, 2, '2025-10-01', '2025-11-30', 'Mardi 09:00 - 16:00', 'presentiel', 10),
-                                                                                                            (3, 3, '2025-09-15', '2025-12-20', 'Mercredi 14:00 - 17:00', 'en_ligne', 20);
+                                                                                                            (1, 2, '2025-09-01', '2025-12-15', 'Lundi 18:00 - 21:00', 'EN_LIGNE', 15),
+                                                                                                            (2, 2, '2025-10-01', '2025-11-30', 'Mardi 09:00 - 16:00', 'PRESENTIEL', 10),
+                                                                                                            (3, 3, '2025-09-15', '2025-12-20', 'Mercredi 14:00 - 17:00', 'EN_LIGNE', 20);
 
-INSERT INTO inscription (etudiant_id, session_id, statut, communication_structuree, statut_paiement, date_paiement) VALUES
+INSERT INTO inscription (etudiant_id, session_id, statut, communication_structuree, paiement_signale, paiement_valide) VALUES
 -- Lucas est inscrit en Java, paiement confirmé
-(4, 1, 'en_cours', '+++001/2025/00001+++', 'confirme', '2025-08-20 10:30:00'),
+(4, 1, 'EN_COURS', '+++001/2025/00001+++', TRUE, TRUE),
 -- Sophie est inscrite en SQL, paiement en attente
-(5, 2, 'inscrit', '+++002/2025/00002+++', 'en_attente', NULL),
+(5, 2, 'INSCRIT', '+++002/2025/00002+++', FALSE, FALSE),
 -- Thomas a fini son cours d'Anglais
-(6, 3, 'termine', '+++003/2025/00003+++', 'confirme', '2025-09-01 09:00:00');
+(6, 3, 'TERMINE', '+++003/2025/00003+++', TRUE, TRUE);
