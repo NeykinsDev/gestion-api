@@ -4,33 +4,14 @@ import be.eafc.marwan.model.Inscription;
 import be.eafc.marwan.model.Session;
 import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
 import java.io.IOException;
+import java.util.Map;
 
 @WebServlet("/inscriptions")
-public class InscriptionServlet extends HttpServlet {
-
-    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-
-    private void writeJson(HttpServletResponse res, String json) throws IOException {
-        res.setContentType("application/json");
-        res.setCharacterEncoding("UTF-8");
-        res.getWriter().write(json);
-    }
-
-    private Utilisateur getUser(HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null) return null;
-
-        Object obj = session.getAttribute("user");
-        if (obj instanceof Utilisateur) return (Utilisateur) obj;
-
-        return null;
-    }
+public class InscriptionServlet extends BaseServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
@@ -38,22 +19,22 @@ public class InscriptionServlet extends HttpServlet {
 
         if (user == null) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            writeJson(res, "{\"success\": false, \"message\": \"Connexion requise\"}");
+            writeJson(res, Map.of("success", false, "message", "Connexion requise"));
             return;
         }
 
         if ("ADMIN".equals(user.getRole())) {
-            writeJson(res, mapper.writeValueAsString(Inscription.findAll()));
+            writeJson(res, Inscription.findAll());
             return;
         }
 
         if ("ETUDIANT".equals(user.getRole())) {
-            writeJson(res, mapper.writeValueAsString(Inscription.findByEtudiant(user.getId())));
+            writeJson(res, Inscription.findByEtudiant(user.getId()));
             return;
         }
 
         res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+        writeJson(res, Map.of("success", false, "message", "Acces refuse"));
     }
 
     @Override
@@ -62,27 +43,32 @@ public class InscriptionServlet extends HttpServlet {
 
         if (user == null || !"ETUDIANT".equals(user.getRole())) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+            writeJson(res, Map.of("success", false, "message", "Acces refuse"));
             return;
         }
 
-        JsonNode node = mapper.readTree(req.getInputStream());
-        int sessionId = node.get("sessionId").asInt();
+        try {
+            JsonNode node = mapper.readTree(req.getInputStream());
+            int sessionId = node.get("sessionId").asInt();
 
-        Session session = new Session();
-        session.setId(sessionId);
+            Session session = new Session();
+            session.setId(sessionId);
 
-        Inscription inscription = new Inscription();
-        inscription.setEtudiant(user);
-        inscription.setSession(session);
+            Inscription inscription = new Inscription();
+            inscription.setEtudiant(user);
+            inscription.setSession(session);
 
-        boolean ok = inscription.enregistrer();
+            boolean ok = inscription.enregistrer();
 
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Inscription creee\"}");
-        } else {
+            if (ok) {
+                writeJson(res, Map.of("success", true, "message", "Inscription creee"));
+            } else {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, Map.of("success", false, "message", "Inscription impossible"));
+            }
+        } catch (Exception e) {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Inscription impossible\"}");
+            writeJson(res, Map.of("success", false, "message", "Donnees invalides"));
         }
     }
 
@@ -92,22 +78,27 @@ public class InscriptionServlet extends HttpServlet {
 
         if (user == null || !"ADMIN".equals(user.getRole())) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+            writeJson(res, Map.of("success", false, "message", "Acces refuse"));
             return;
         }
 
-        JsonNode node = mapper.readTree(req.getInputStream());
+        try {
+            JsonNode node = mapper.readTree(req.getInputStream());
 
-        int inscriptionId = node.get("inscriptionId").asInt();
-        String statut = node.get("statut").asText();
+            int inscriptionId = node.get("inscriptionId").asInt();
+            String statut = node.get("statut").asText();
 
-        boolean ok = Inscription.modifierStatut(inscriptionId, statut);
+            boolean ok = Inscription.modifierStatut(inscriptionId, statut);
 
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Statut modifie\"}");
-        } else {
+            if (ok) {
+                writeJson(res, Map.of("success", true, "message", "Statut modifie"));
+            } else {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, Map.of("success", false, "message", "Statut invalide ou modification impossible"));
+            }
+        } catch (Exception e) {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Statut invalide ou modification impossible\"}");
+            writeJson(res, Map.of("success", false, "message", "Donnees invalides"));
         }
     }
 }

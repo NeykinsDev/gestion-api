@@ -2,94 +2,79 @@ package be.eafc.marwan.controller;
 
 import be.eafc.marwan.model.Utilisateur;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @WebServlet("/utilisateurs")
-public class UtilisateurServlet extends HttpServlet {
+public class UtilisateurServlet extends BaseServlet {
 
-    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
+		if (!isAdmin(req)) {
+			res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			writeJson(res, Map.of("success", false, "message", "Acces refuse"));
+			return;
+		}
 
-    private void writeJson(HttpServletResponse res, String json) throws IOException {
-        res.setContentType("application/json");
-        res.setCharacterEncoding("UTF-8");
-        res.getWriter().write(json);
-    }
+		String role = req.getParameter("role");
+		List<Utilisateur> utilisateurs;
 
-    private Utilisateur getUser(HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null) return null;
+		if (role != null && !role.isBlank()) {
+			utilisateurs = Utilisateur.findByRole(role);
+		} else {
+			utilisateurs = Utilisateur.findAll();
+		}
 
-        Object obj = session.getAttribute("user");
-        if (obj instanceof Utilisateur) return (Utilisateur) obj;
+		writeJson(res, utilisateurs);
+	}
 
-        return null;
-    }
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+		try {
+			Utilisateur u = mapper.readValue(req.getInputStream(), Utilisateur.class);
+			boolean cree = u.enregistrer();
 
-    private boolean isAdmin(HttpServletRequest req) {
-        Utilisateur u = getUser(req);
-        return u != null && "ADMIN".equals(u.getRole());
-    }
+			if (cree) {
+				writeJson(res, Map.of("success", true, "message", "Utilisateur cree"));
+			} else {
+				res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				writeJson(res, Map.of("success", false, "message", "Email deja utilise ou donnees invalides"));
+			}
+		} catch (Exception e) {
+			res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			writeJson(res, Map.of("success", false, "message", "Donnees invalides"));
+		}
+	}
 
-    @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
-            return;
-        }
+	@Override
+	protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
+		if (!isAdmin(req)) {
+			res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			writeJson(res, Map.of("success", false, "message", "Acces refuse"));
+			return;
+		}
 
-        String role = req.getParameter("role");
-        List<Utilisateur> utilisateurs;
+		try {
+			JsonNode node = mapper.readTree(req.getInputStream());
 
-        if (role != null && !role.isBlank()) {
-            utilisateurs = Utilisateur.findByRole(role);
-        } else {
-            utilisateurs = Utilisateur.findAll();
-        }
+			int utilisateurId = node.get("utilisateurId").asInt();
+			String role = node.get("role").asText();
 
-        writeJson(res, mapper.writeValueAsString(utilisateurs));
-    }
+			boolean ok = Utilisateur.modifierRole(utilisateurId, role);
 
-    @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        Utilisateur u = mapper.readValue(req.getInputStream(), Utilisateur.class);
-
-        boolean cree = u.enregistrer();
-
-        if (cree) {
-            writeJson(res, "{\"success\": true, \"message\": \"Utilisateur cree\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Email deja utilise ou donnees invalides\"}");
-        }
-    }
-
-    @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (!isAdmin(req)) {
-            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
-            return;
-        }
-
-        JsonNode node = mapper.readTree(req.getInputStream());
-
-        int utilisateurId = node.get("utilisateurId").asInt();
-        String role = node.get("role").asText();
-
-        boolean ok = Utilisateur.modifierRole(utilisateurId, role);
-
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Role modifie\"}");
-        } else {
-            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Role invalide ou modification impossible\"}");
-        }
-    }
+			if (ok) {
+				writeJson(res, Map.of("success", true, "message", "Role modifie"));
+			} else {
+				res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				writeJson(res, Map.of("success", false, "message", "Role invalide ou modification impossible"));
+			}
+		} catch (Exception e) {
+			res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			writeJson(res, Map.of("success", false, "message", "Donnees invalides"));
+		}
+	}
 }

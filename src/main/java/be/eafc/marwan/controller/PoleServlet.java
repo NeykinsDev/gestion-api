@@ -1,75 +1,63 @@
 package be.eafc.marwan.controller;
 
 import be.eafc.marwan.model.Pole;
-import be.eafc.marwan.model.Utilisateur;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
 import java.io.IOException;
+import java.util.Map;
 
 @WebServlet("/poles")
-public class PoleServlet extends HttpServlet {
-
-    private final ObjectMapper mapper = new ObjectMapper();
-
-    private void writeJson(HttpServletResponse res, String json) throws IOException {
-        res.setContentType("application/json");
-        res.setCharacterEncoding("UTF-8");
-        res.getWriter().write(json);
-    }
-
-    private Utilisateur getUser(HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null) return null;
-
-        Object obj = session.getAttribute("user");
-        if (obj instanceof Utilisateur) return (Utilisateur) obj;
-
-        return null;
-    }
-
-    private boolean isAdmin(HttpServletRequest req) {
-        Utilisateur u = getUser(req);
-        return u != null && "ADMIN".equals(u.getRole());
-    }
+public class PoleServlet extends BaseServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String idParam = req.getParameter("id");
 
         if (idParam != null && !idParam.isBlank()) {
-            Pole p = Pole.findById(Integer.parseInt(idParam));
-
-            if (p == null) {
-                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                writeJson(res, "{\"success\": false, \"message\": \"Pole introuvable\"}");
+            Integer id = parseIntParam(req, "id");
+            if (id == null) {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, Map.of("success", false, "message", "Identifiant invalide"));
                 return;
             }
 
-            writeJson(res, mapper.writeValueAsString(p));
+            Pole p = Pole.findById(id);
+
+            if (p == null) {
+                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                writeJson(res, Map.of("success", false, "message", "Pole introuvable"));
+                return;
+            }
+
+            writeJson(res, p);
             return;
         }
 
-        writeJson(res, mapper.writeValueAsString(Pole.findAll()));
+        writeJson(res, Pole.findAll());
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+            writeJson(res, Map.of("success", false, "message", "Acces refuse"));
             return;
         }
 
-        Pole p = mapper.readValue(req.getInputStream(), Pole.class);
-        boolean ok = p.enregistrer();
+        try {
+            Pole p = mapper.readValue(req.getInputStream(), Pole.class);
+            boolean ok = p.enregistrer();
 
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Pole cree\"}");
-        } else {
+            if (ok) {
+                writeJson(res, Map.of("success", true, "message", "Pole cree"));
+            } else {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, Map.of("success", false, "message", "Creation impossible"));
+            }
+        } catch (Exception e) {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Creation impossible\"}");
+            writeJson(res, Map.of("success", false, "message", "Donnees invalides"));
         }
     }
 
@@ -77,18 +65,23 @@ public class PoleServlet extends HttpServlet {
     protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+            writeJson(res, Map.of("success", false, "message", "Acces refuse"));
             return;
         }
 
-        Pole p = mapper.readValue(req.getInputStream(), Pole.class);
-        boolean ok = p.modifier();
+        try {
+            Pole p = mapper.readValue(req.getInputStream(), Pole.class);
+            boolean ok = p.modifier();
 
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Pole modifie\"}");
-        } else {
+            if (ok) {
+                writeJson(res, Map.of("success", true, "message", "Pole modifie"));
+            } else {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, Map.of("success", false, "message", "Modification impossible"));
+            }
+        } catch (Exception e) {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Modification impossible\"}");
+            writeJson(res, Map.of("success", false, "message", "Donnees invalides"));
         }
     }
 
@@ -96,18 +89,18 @@ public class PoleServlet extends HttpServlet {
     protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+            writeJson(res, Map.of("success", false, "message", "Acces refuse"));
             return;
         }
 
-        int id = Integer.parseInt(req.getParameter("id"));
-        boolean ok = Pole.supprimer(id);
+        Integer id = parseIntParam(req, "id");
+        boolean ok = id != null && Pole.supprimer(id);
 
         if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Pole supprime\"}");
+            writeJson(res, Map.of("success", true, "message", "Pole supprime"));
         } else {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Suppression impossible\"}");
+            writeJson(res, Map.of("success", false, "message", "Suppression impossible"));
         }
     }
 }

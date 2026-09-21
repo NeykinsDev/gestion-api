@@ -1,95 +1,84 @@
 package be.eafc.marwan.controller;
 
 import be.eafc.marwan.model.Formation;
-import be.eafc.marwan.model.Utilisateur;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @WebServlet("/formations")
-public class FormationServlet extends HttpServlet {
-
-    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-
-    private void writeJson(HttpServletResponse res, String json) throws IOException {
-        res.setContentType("application/json");
-        res.setCharacterEncoding("UTF-8");
-        res.getWriter().write(json);
-    }
-
-    private Utilisateur getUser(HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null) return null;
-
-        Object obj = session.getAttribute("user");
-        if (obj instanceof Utilisateur) return (Utilisateur) obj;
-
-        return null;
-    }
-
-    private boolean isAdmin(HttpServletRequest req) {
-        Utilisateur u = getUser(req);
-        return u != null && "ADMIN".equals(u.getRole());
-    }
+public class FormationServlet extends BaseServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
         String idParam = req.getParameter("id");
-        String prixParam = req.getParameter("maxPrix");
-        String dureeParam = req.getParameter("maxDuree");
-        String poleParam = req.getParameter("poleId");
-        String modalite = req.getParameter("modalite");
 
         if (idParam != null && !idParam.isBlank()) {
-            Formation f = Formation.findById(Integer.parseInt(idParam));
-
-            if (f == null) {
-                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                writeJson(res, "{\"success\": false, \"message\": \"Formation introuvable\"}");
+            Integer id = parseIntParam(req, "id");
+            if (id == null) {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, Map.of("success", false, "message", "Identifiant invalide"));
                 return;
             }
 
-            writeJson(res, mapper.writeValueAsString(f));
+            Formation f = Formation.findById(id);
+
+            if (f == null) {
+                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                writeJson(res, Map.of("success", false, "message", "Formation introuvable"));
+                return;
+            }
+
+            writeJson(res, f);
             return;
         }
 
-        Double maxPrix = prixParam != null && !prixParam.isBlank()
-                ? Double.parseDouble(prixParam)
-                : null;
+        Double maxPrix;
+        Integer maxDuree;
+        Integer poleId;
 
-        Integer maxDuree = dureeParam != null && !dureeParam.isBlank()
-                ? Integer.parseInt(dureeParam)
-                : null;
+        try {
+            String prixParam = req.getParameter("maxPrix");
+            String dureeParam = req.getParameter("maxDuree");
 
-        Integer poleId = poleParam != null && !poleParam.isBlank()
-                ? Integer.parseInt(poleParam)
-                : null;
+            maxPrix = prixParam != null && !prixParam.isBlank() ? Double.parseDouble(prixParam) : null;
+            maxDuree = dureeParam != null && !dureeParam.isBlank() ? Integer.parseInt(dureeParam) : null;
+            poleId = parseIntParam(req, "poleId");
+        } catch (NumberFormatException e) {
+            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            writeJson(res, Map.of("success", false, "message", "Parametres de recherche invalides"));
+            return;
+        }
 
+        String modalite = req.getParameter("modalite");
         List<Formation> formations = Formation.findByCritere(maxPrix, maxDuree, poleId, modalite);
 
-        writeJson(res, mapper.writeValueAsString(formations));
+        writeJson(res, formations);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+            writeJson(res, Map.of("success", false, "message", "Acces refuse"));
             return;
         }
 
-        Formation f = mapper.readValue(req.getInputStream(), Formation.class);
-        boolean ok = f.enregistrer();
+        try {
+            Formation f = mapper.readValue(req.getInputStream(), Formation.class);
+            boolean ok = f.enregistrer();
 
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation creee\"}");
-        } else {
+            if (ok) {
+                writeJson(res, Map.of("success", true, "message", "Formation creee"));
+            } else {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, Map.of("success", false, "message", "Creation impossible"));
+            }
+        } catch (Exception e) {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Creation impossible\"}");
+            writeJson(res, Map.of("success", false, "message", "Donnees invalides"));
         }
     }
 
@@ -97,18 +86,23 @@ public class FormationServlet extends HttpServlet {
     protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+            writeJson(res, Map.of("success", false, "message", "Acces refuse"));
             return;
         }
 
-        Formation f = mapper.readValue(req.getInputStream(), Formation.class);
-        boolean ok = f.modifier();
+        try {
+            Formation f = mapper.readValue(req.getInputStream(), Formation.class);
+            boolean ok = f.modifier();
 
-        if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation modifiee\"}");
-        } else {
+            if (ok) {
+                writeJson(res, Map.of("success", true, "message", "Formation modifiee"));
+            } else {
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                writeJson(res, Map.of("success", false, "message", "Modification impossible"));
+            }
+        } catch (Exception e) {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Modification impossible\"}");
+            writeJson(res, Map.of("success", false, "message", "Donnees invalides"));
         }
     }
 
@@ -116,18 +110,18 @@ public class FormationServlet extends HttpServlet {
     protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (!isAdmin(req)) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            writeJson(res, "{\"success\": false, \"message\": \"Acces refuse\"}");
+            writeJson(res, Map.of("success", false, "message", "Acces refuse"));
             return;
         }
 
-        int id = Integer.parseInt(req.getParameter("id"));
-        boolean ok = Formation.supprimer(id);
+        Integer id = parseIntParam(req, "id");
+        boolean ok = id != null && Formation.supprimer(id);
 
         if (ok) {
-            writeJson(res, "{\"success\": true, \"message\": \"Formation supprimee\"}");
+            writeJson(res, Map.of("success", true, "message", "Formation supprimee"));
         } else {
             res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(res, "{\"success\": false, \"message\": \"Suppression impossible\"}");
+            writeJson(res, Map.of("success", false, "message", "Suppression impossible"));
         }
     }
 }
