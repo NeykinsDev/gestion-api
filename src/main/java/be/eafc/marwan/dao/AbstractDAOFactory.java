@@ -1,7 +1,5 @@
 package be.eafc.marwan.dao;
 
-import be.eafc.marwan.model.Session;
-
 public abstract class AbstractDAOFactory {
 
     private static AbstractDAOFactory factory;
