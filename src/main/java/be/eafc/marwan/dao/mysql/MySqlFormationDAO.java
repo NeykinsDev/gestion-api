@@ -10,10 +10,10 @@ import java.util.List;
 
 public class MySqlFormationDAO implements FormationDAO {
 
-    private final Connection c;
+    private final MySqlDAOFactory factory;
 
     public MySqlFormationDAO(MySqlDAOFactory factory) {
-        this.c = factory.getConnection();
+        this.factory = factory;
     }
 
     private Formation map(ResultSet rs) throws SQLException {
@@ -44,7 +44,8 @@ public class MySqlFormationDAO implements FormationDAO {
                 ORDER BY f.titre
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql);
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
@@ -67,7 +68,8 @@ public class MySqlFormationDAO implements FormationDAO {
                 WHERE f.id = ?
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -100,7 +102,8 @@ public class MySqlFormationDAO implements FormationDAO {
 
         sql.append(" ORDER BY f.titre");
 
-        try (PreparedStatement ps = c.prepareStatement(sql.toString())) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql.toString())) {
             int i = 1;
 
             if (maxPrix != null) ps.setDouble(i++, maxPrix);
@@ -128,7 +131,9 @@ public class MySqlFormationDAO implements FormationDAO {
                 VALUES (?, ?, ?, ?, ?)
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, f.getPole().getId());
             ps.setString(2, f.getTitre());
             ps.setString(3, f.getDescription());
@@ -151,7 +156,9 @@ public class MySqlFormationDAO implements FormationDAO {
                 WHERE id = ?
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, f.getPole().getId());
             ps.setString(2, f.getTitre());
             ps.setString(3, f.getDescription());
@@ -171,7 +178,9 @@ public class MySqlFormationDAO implements FormationDAO {
     public boolean delete(int id) {
         String sql = "DELETE FROM formation WHERE id = ?";
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
 

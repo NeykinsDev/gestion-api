@@ -9,10 +9,10 @@ import java.util.List;
 
 public class MySqlPoleDAO implements PoleDAO {
 
-    private final Connection c;
+    private final MySqlDAOFactory factory;
 
     public MySqlPoleDAO(MySqlDAOFactory factory) {
-        this.c = factory.getConnection();
+        this.factory = factory;
     }
 
     private Pole map(ResultSet rs) throws SQLException {
@@ -27,7 +27,8 @@ public class MySqlPoleDAO implements PoleDAO {
     public List<Pole> findAll() {
         List<Pole> list = new ArrayList<>();
 
-        try (PreparedStatement ps = c.prepareStatement("SELECT * FROM pole ORDER BY nom");
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement("SELECT * FROM pole ORDER BY nom");
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
@@ -43,7 +44,9 @@ public class MySqlPoleDAO implements PoleDAO {
 
     @Override
     public Pole findById(int id) {
-        try (PreparedStatement ps = c.prepareStatement("SELECT * FROM pole WHERE id = ?")) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement("SELECT * FROM pole WHERE id = ?")) {
+
             ps.setInt(1, id);
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -61,7 +64,9 @@ public class MySqlPoleDAO implements PoleDAO {
     public boolean insert(Pole p) {
         String sql = "INSERT INTO pole (nom, description) VALUES (?, ?)";
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setString(1, p.getNom());
             ps.setString(2, p.getDescription());
             return ps.executeUpdate() > 0;
@@ -76,7 +81,9 @@ public class MySqlPoleDAO implements PoleDAO {
     public boolean update(Pole p) {
         String sql = "UPDATE pole SET nom = ?, description = ? WHERE id = ?";
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setString(1, p.getNom());
             ps.setString(2, p.getDescription());
             ps.setInt(3, p.getId());
@@ -92,7 +99,9 @@ public class MySqlPoleDAO implements PoleDAO {
     public boolean delete(int id) {
         String sql = "DELETE FROM pole WHERE id = ?";
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
 

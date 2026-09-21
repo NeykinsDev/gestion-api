@@ -10,10 +10,10 @@ import java.util.List;
 
 public class MySqlInscriptionDAO implements InscriptionDAO {
 
-    private final Connection c;
+    private final MySqlDAOFactory factory;
 
     public MySqlInscriptionDAO(MySqlDAOFactory factory) {
-        this.c = factory.getConnection();
+        this.factory = factory;
     }
 
     private String genererCommunication(int etudiantId, int sessionId) {
@@ -24,7 +24,7 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
         return String.format("+++%03d/%03d/%04d+++", a, b, c);
     }
 
-    private boolean sessionEstComplete(int sessionId) throws SQLException {
+    private boolean sessionEstComplete(Connection c, int sessionId) throws SQLException {
         String sql = """
                 SELECT s.capacite_max, COUNT(i.id) AS nb
                 FROM session s
@@ -128,11 +128,11 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
                 VALUES (?, ?, 'INSCRIT', ?, false, false)
                 """;
 
-        try {
+        try (Connection c = factory.getConnection()) {
             int etudiantId = inscription.getEtudiant().getId();
             int sessionId = inscription.getSession().getId();
 
-            if (sessionEstComplete(sessionId)) {
+            if (sessionEstComplete(c, sessionId)) {
                 return false;
             }
 
@@ -155,7 +155,8 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
         List<Inscription> list = new ArrayList<>();
         String sql = baseSql() + " ORDER BY i.date_inscription DESC";
 
-        try (PreparedStatement ps = c.prepareStatement(sql);
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) list.add(map(rs));
@@ -172,7 +173,8 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
         List<Inscription> list = new ArrayList<>();
         String sql = baseSql() + " WHERE i.etudiant_id = ? ORDER BY i.date_inscription DESC";
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, etudiantId);
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -194,7 +196,9 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
                 WHERE id = ? AND etudiant_id = ?
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, inscriptionId);
             ps.setInt(2, etudiantId);
 
@@ -214,7 +218,9 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
                 WHERE id = ?
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setBoolean(1, valide);
             ps.setString(2, valide ? "EN_COURS" : "INSCRIT");
             ps.setInt(3, inscriptionId);
@@ -231,7 +237,9 @@ public class MySqlInscriptionDAO implements InscriptionDAO {
     public boolean updateStatut(int inscriptionId, String statut) {
         String sql = "UPDATE inscription SET statut = ? WHERE id = ?";
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setString(1, statut);
             ps.setInt(2, inscriptionId);
 

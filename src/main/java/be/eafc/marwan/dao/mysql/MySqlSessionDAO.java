@@ -12,10 +12,10 @@ import java.util.List;
 
 public class MySqlSessionDAO implements SessionDAO {
 
-    private final Connection c;
+    private final MySqlDAOFactory factory;
 
     public MySqlSessionDAO(MySqlDAOFactory factory) {
-        this.c = factory.getConnection();
+        this.factory = factory;
     }
 
     private Session map(ResultSet rs) throws SQLException {
@@ -83,7 +83,8 @@ public class MySqlSessionDAO implements SessionDAO {
         List<Session> list = new ArrayList<>();
         String sql = baseSql() + " ORDER BY s.date_debut";
 
-        try (PreparedStatement ps = c.prepareStatement(sql);
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) list.add(map(rs));
@@ -99,7 +100,8 @@ public class MySqlSessionDAO implements SessionDAO {
     public Session findById(int id) {
         String sql = baseSql() + " WHERE s.id = ?";
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, id);
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -118,7 +120,8 @@ public class MySqlSessionDAO implements SessionDAO {
         List<Session> list = new ArrayList<>();
         String sql = baseSql() + " WHERE s.formation_id = ? ORDER BY s.date_debut";
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, formationId);
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -141,7 +144,8 @@ public class MySqlSessionDAO implements SessionDAO {
                 ORDER BY s.date_debut
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, formateurId);
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -164,7 +168,8 @@ public class MySqlSessionDAO implements SessionDAO {
                 ORDER BY s.date_debut DESC
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, formateurId);
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -185,7 +190,9 @@ public class MySqlSessionDAO implements SessionDAO {
                 VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, s.getFormation().getId());
 
             if (s.getFormateur() != null && s.getFormateur().getId() != 0) {
@@ -215,7 +222,9 @@ public class MySqlSessionDAO implements SessionDAO {
                 WHERE id = ?
                 """;
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, s.getFormation().getId());
 
             if (s.getFormateur() != null && s.getFormateur().getId() != 0) {
@@ -242,7 +251,9 @@ public class MySqlSessionDAO implements SessionDAO {
     public boolean delete(int id) {
         String sql = "DELETE FROM session WHERE id = ?";
 
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = factory.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
 

@@ -9,7 +9,6 @@ import java.sql.SQLException;
 public class MySqlDAOFactory extends AbstractDAOFactory {
 
     private static MySqlDAOFactory instance;
-    private Connection connection;
 
     private static final String URL = "jdbc:mysql://localhost:3306/centre_formations";
     private static final String USER = "root";
@@ -18,9 +17,8 @@ public class MySqlDAOFactory extends AbstractDAOFactory {
     private MySqlDAOFactory(){
         try{
             Class.forName("com.mysql.cj.jdbc.Driver");
-            this.connection = DriverManager.getConnection(URL, USER, PASSWORD);
-        } catch (SQLException | ClassNotFoundException e){
-            throw new RuntimeException("Connexion BDD impossible", e);
+        } catch (ClassNotFoundException e){
+            throw new RuntimeException("Driver JDBC MySQL introuvable", e);
         }
     }
 
@@ -31,8 +29,12 @@ public class MySqlDAOFactory extends AbstractDAOFactory {
         return instance;
     }
 
-    public Connection getConnection(){
-        return connection;
+    // Une connexion par appel : Tomcat traite les requetes sur des threads
+    // concurrents, or java.sql.Connection n'est pas thread-safe. Partager une
+    // seule connexion (comme avant) corrompt les requetes sous charge et ne
+    // se remet jamais d'une coupure reseau avec la BDD.
+    public Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 
     @Override
