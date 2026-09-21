@@ -2,12 +2,11 @@ package be.eafc.marwan.model;
 
 import be.eafc.marwan.dao.AbstractDAOFactory;
 import be.eafc.marwan.dao.UtilisateurDAO;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
 
 public class Utilisateur {
 
@@ -31,20 +30,6 @@ public class Utilisateur {
         this.dateCreation = dateCreation;
     }
 
-    // !!
-//    public List<Utilisateur> findAll() {
-//        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
-//        return dao.findAll();
-//    }
-//
-//    public void insert() {
-//        String mdpHache = BCrypt.hashpw(this.motDePasse, BCrypt.gensalt());
-//        this.setMotDePasse(mdpHache);
-//
-//        UtilisateurDAO dao = AbstractDAOFactory.getFactory().createUtilisateurDAO();
-//        dao.insert(this);
-//    }
-
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     public String getNom() { return nom; }
@@ -53,6 +38,7 @@ public class Utilisateur {
     public void setPrenom(String prenom) { this.prenom = prenom; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    @JsonIgnore
     public String getMotDePasse() { return motDePasse; }
     public void setMotDePasse(String motDePasse) { this.motDePasse = motDePasse; }
     public String getRole() { return role; }
@@ -69,9 +55,10 @@ public class Utilisateur {
             return false;
         }
 
-        if (this.role == null || this.role.isBlank()) {
-            this.role = "ETUDIANT";
-        }
+        // enregistrer() est l'auto-inscription publique (UtilisateurServlet.doPost n'est
+        // pas protege par isAdmin) : le role est toujours force a ETUDIANT, jamais pris
+        // depuis le JSON du client, sinon n'importe qui pourrait se creer un compte ADMIN.
+        this.role = "ETUDIANT";
 
         this.motDePasse = BCrypt.hashpw(this.motDePasse, BCrypt.gensalt());
 
